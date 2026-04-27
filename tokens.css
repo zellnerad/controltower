@@ -1,0 +1,125 @@
+/* ═══════════════════════════════════════════════════════════════
+   Robo-ops design tokens — Linear/Notion white+gray, Geist type.
+   One source of truth: every screen reads from these variables.
+   ═══════════════════════════════════════════════════════════════ */
+:root {
+  /* surfaces */
+  --bg:          #fbfbfa;    /* page background — warm off-white */
+  --surface:     #ffffff;    /* cards, modals                    */
+  --surface-2:   #f6f6f4;    /* sunken rows, filter-bar          */
+  --surface-3:   #efefec;    /* hovered rows                     */
+  --surface-4:   #e7e6e2;    /* heavier surface                  */
+
+  /* borders */
+  --border:        #e9e8e3;  /* default 1px line                 */
+  --border-strong: #d6d4cd;  /* emphasis 1px                     */
+  --border-focus:  #c6c4bc;  /* focus-ring neutral               */
+
+  /* ink — text colors */
+  --ink:     #17171a;        /* primary text, headlines          */
+  --ink-1:   #2a2a2f;        /* body emphasis                    */
+  --ink-2:   #4a4a52;        /* body                             */
+  --ink-3:   #72727a;        /* meta / captions                  */
+  --ink-4:   #9a9aa2;        /* hint / divider labels            */
+  --ink-5:   #b4b4bc;        /* disabled / placeholder           */
+
+  /* accent (settable via Tweaks) */
+  --accent:       #5b5bf7;
+  --accent-soft:  #eeeeff;
+  --accent-ink:   #3f3fcf;
+  --accent-weak:  #f4f4ff;
+
+  /* state tones */
+  --ok:        #16a34a;   --ok-soft:     #e8f6ed;   --ok-ink:     #0f7a37;
+  --warn:      #d97706;   --warn-soft:   #fef2d8;   --warn-ink:   #9a5a05;
+  --danger:    #dc2626;   --danger-soft: #fee4e4;   --danger-ink: #a8141a;
+  --info:      #0284c7;   --info-soft:   #e2f0fa;   --info-ink:   #035b8f;
+  --agent:     #7c3aed;   --agent-soft:  #f1ebff;   --agent-ink:  #5b21b6;
+
+  /* type */
+  --sans: "Geist", "Söhne", -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI", system-ui, sans-serif;
+  --mono: "Geist Mono", ui-monospace, "JetBrains Mono", "SF Mono", Menlo, Consolas, monospace;
+  --serif: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+
+  /* shape */
+  --radius-xs: 4px;
+  --radius-sm: 6px;
+  --radius:    8px;
+  --radius-lg: 12px;
+  --radius-xl: 16px;
+
+  /* elevation */
+  --shadow-xs: 0 1px 0 rgba(16,16,20,.04);
+  --shadow-sm: 0 1px 2px rgba(16,16,20,.04), 0 1px 0 rgba(16,16,20,.02);
+  --shadow:    0 1px 2px rgba(16,16,20,.04), 0 4px 14px rgba(16,16,20,.05);
+  --shadow-lg: 0 4px 12px rgba(16,16,20,.06), 0 12px 40px rgba(16,16,20,.08);
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  font-family: var(--sans);
+  color: var(--ink);
+  background: var(--bg);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  font-feature-settings: "ss01","cv11","ss03";
+  letter-spacing: -.005em;
+  font-size: 13px;
+}
+
+.mono { font-family: var(--mono); font-feature-settings: "zero","ss01"; letter-spacing: 0; }
+.tnum { font-variant-numeric: tabular-nums; }
+.serif { font-family: var(--serif); letter-spacing: -.01em; }
+
+/* form controls inherit the new font stack */
+button, input, select, textarea { font-family: inherit; color: inherit; }
+
+/* scrollbars — minimal, like Linear */
+::-webkit-scrollbar { width: 10px; height: 10px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--border); border-radius: 5px; border: 2px solid var(--bg); }
+::-webkit-scrollbar-thumb:hover { background: var(--border-strong); }
+
+/* ═══════════════════════════════════════════════════════════════
+   Dark → Light reclamation layer.
+   Most screens inline-style their dark bg/borders/text. We can't
+   override inline styles, so each JSX file reads from vars OR we
+   map their hard-coded colors via utility classes. Use these when
+   retrofitting components.
+   ═══════════════════════════════════════════════════════════════ */
+.bb-card       { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); }
+.bb-card-sunk  { background: var(--surface-2); border: 1px solid var(--border); border-radius: var(--radius); }
+
+.bb-btn        { appearance: none; border: 1px solid var(--border); background: var(--surface);
+                 color: var(--ink-1); padding: 6px 11px; border-radius: var(--radius-sm);
+                 font-size: 12.5px; font-weight: 500; cursor: pointer; display: inline-flex;
+                 align-items: center; gap: 6px; transition: background .1s, border-color .1s; }
+.bb-btn:hover  { background: var(--surface-2); border-color: var(--border-strong); }
+.bb-btn.primary{ background: var(--ink); color: #fff; border-color: var(--ink); }
+.bb-btn.primary:hover { background: var(--ink-1); border-color: var(--ink-1); }
+.bb-btn.accent { background: var(--accent); color: #fff; border-color: var(--accent); }
+.bb-btn.accent:hover { filter: brightness(.95); }
+
+.bb-pill { display: inline-flex; align-items: center; gap: 6px; padding: 3px 9px;
+           border-radius: 999px; font-size: 11px; font-weight: 600;
+           background: var(--surface-2); color: var(--ink-2); border: 1px solid var(--border); }
+.bb-pill-ok     { background: var(--ok-soft);     color: var(--ok-ink);     border-color: transparent; }
+.bb-pill-warn   { background: var(--warn-soft);   color: var(--warn-ink);   border-color: transparent; }
+.bb-pill-danger { background: var(--danger-soft); color: var(--danger-ink); border-color: transparent; }
+.bb-pill-info   { background: var(--info-soft);   color: var(--info-ink);   border-color: transparent; }
+.bb-pill-agent  { background: var(--agent-soft);  color: var(--agent-ink);  border-color: transparent; }
+
+/* section header typography used across all main pages */
+.bb-h1 { font-family: var(--serif); font-size: 28px; font-weight: 700;
+         letter-spacing: -.02em; color: var(--ink); margin: 0; line-height: 1.1; }
+.bb-h1-count { font-family: var(--serif); font-weight: 500; font-size: 18px; color: var(--ink-4); letter-spacing: -.01em; }
+.bb-subtitle { font-family: var(--serif); font-style: normal; font-size: 13px; font-weight: 400;
+               color: var(--ink-3); margin-top: 6px; letter-spacing: -.005em; }
+.bb-section   { font-size: 11px; font-weight: 600; text-transform: uppercase;
+                letter-spacing: .08em; color: var(--ink-3); }
+.bb-meta      { font-family: var(--mono); font-size: 10.5px; letter-spacing: .05em;
+                color: var(--ink-4); text-transform: uppercase; }
+
+@keyframes billPulse { 0%, 100% { opacity: 1; } 50% { opacity: .35; } }

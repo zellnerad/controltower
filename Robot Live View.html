@@ -1,0 +1,194 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8"/>
+<title>Robo-ops · Live View</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@400;500;600&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet"/>
+<link rel="stylesheet" href="tokens.css"/>
+<style>
+  html, body { height: 100%; overflow: hidden; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  @keyframes billPulse { 0%,100% { opacity: 1; } 50% { opacity: .35; } }
+  @keyframes siteCountBump { 0% { transform: scale(1); } 30% { transform: scale(1.18); } 100% { transform: scale(1); } }
+  @keyframes siteCountPlus { 0% { opacity: 0; transform: translateY(6px); } 15% { opacity: 1; transform: translateY(0); } 80% { opacity: 1; } 100% { opacity: 0; transform: translateY(-6px); } }
+  @keyframes activityFlash { 0% { background: rgba(34,197,94,.18); } 100% { background: transparent; } }
+  /* tweak panel */
+  .tweak-panel { position: fixed; bottom: 16px; right: 16px; z-index: 200;
+    background: #fff; border: 1px solid var(--border); border-radius: 12px;
+    box-shadow: 0 10px 40px rgba(0,0,0,.12), 0 2px 8px rgba(0,0,0,.04);
+    padding: 14px 16px; width: 240px; font-family: var(--sans); display: none; }
+  .tweak-panel.on { display: block; }
+  .tweak-panel h4 { margin: 0 0 10px; font-size: 12px; font-weight: 600;
+    color: var(--ink-2); letter-spacing: .3px; text-transform: uppercase; }
+  .tweak-row { display: flex; flex-direction: column; gap: 6px; margin-bottom: 12px; }
+  .tweak-row label { font-size: 11px; color: var(--ink-3); font-weight: 500; }
+  .swatches { display: flex; gap: 6px; }
+  .swatch { width: 22px; height: 22px; border-radius: 5px; border: 2px solid transparent;
+    cursor: pointer; transition: transform .1s; }
+  .swatch:hover { transform: scale(1.1); }
+  .swatch.on { border-color: var(--ink); }
+  .segs { display: flex; background: var(--surface-2); border-radius: 6px; padding: 2px; }
+  .segs button { flex: 1; padding: 5px 8px; border: none; background: transparent;
+    border-radius: 4px; font-size: 11px; font-weight: 500; color: var(--ink-3);
+    cursor: pointer; font-family: inherit; }
+  .segs button.on { background: #fff; color: var(--ink); box-shadow: 0 1px 2px rgba(0,0,0,.08); }
+  .toggle { display: flex; align-items: center; justify-content: space-between; }
+  .toggle .sw { width: 30px; height: 18px; background: var(--border); border-radius: 9px;
+    position: relative; cursor: pointer; transition: background .15s; }
+  .toggle .sw.on { background: var(--accent); }
+  .toggle .sw::after { content:''; position: absolute; top: 2px; left: 2px; width: 14px; height: 14px;
+    background: #fff; border-radius: 7px; transition: transform .15s; box-shadow: 0 1px 2px rgba(0,0,0,.2); }
+  .toggle .sw.on::after { transform: translateX(12px); }
+
+  body { font-family: 'Geist', var(--sans); font-feature-settings: 'ss01','cv11','ss03'; letter-spacing: -.005em; }
+  .mono { font-family: 'Geist Mono', var(--mono); font-feature-settings: 'zero','ss01'; }
+</style>
+</head>
+<body>
+<div id="root"></div>
+
+<script>
+  // tweakable defaults, persisted via host
+  window.TWEAKS = /*EDITMODE-BEGIN*/{
+    "accent": "indigo",
+    "lidar": false,
+    "agentStyle": "chat",
+    "layout": "cinema",
+    "armPos": "sidebar"
+  }/*EDITMODE-END*/;
+
+  const ACCENTS = {
+    indigo: { accent: '#5b5bf7', accentSoft: '#ecedff', accentInk: '#4141e0' },
+    green:  { accent: '#16a34a', accentSoft: '#e7f6ec', accentInk: '#0f7a37' },
+    amber:  { accent: '#d97706', accentSoft: '#fef3c7', accentInk: '#9a5a05' },
+    rose:   { accent: '#e11d48', accentSoft: '#ffe4e9', accentInk: '#a8153a' },
+    slate:  { accent: '#334155', accentSoft: '#e2e8f0', accentInk: '#1e293b' },
+  };
+  function applyAccent(name) {
+    const a = ACCENTS[name] || ACCENTS.indigo;
+    document.documentElement.style.setProperty('--accent', a.accent);
+    document.documentElement.style.setProperty('--accent-soft', a.accentSoft);
+    document.documentElement.style.setProperty('--accent-ink', a.accentInk);
+  }
+  applyAccent(window.TWEAKS.accent);
+</script>
+
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+
+<script type="text/babel" src="design-canvas.jsx"></script>
+<script type="text/babel" src="shared.jsx"></script>
+<script type="text/babel" src="liveview.jsx"></script>
+<script type="text/babel" src="robotsapp.jsx"></script>
+<script type="text/babel" src="inspections.jsx"></script>
+
+<script type="text/babel">
+  function App() {
+    const [lidar, setLidar] = React.useState(window.TWEAKS.lidar);
+    const [accent, setAccent] = React.useState(window.TWEAKS.accent);
+    const [agentStyle, setAgentStyle] = React.useState(window.TWEAKS.agentStyle);
+    const [layout, setLayout] = React.useState(window.TWEAKS.layout || 'cinema');
+    const [armPos, setArmPos] = React.useState(window.TWEAKS.armPos || 'stacked');
+    const [tweaksOn, setTweaksOn] = React.useState(false);
+
+    const LAYOUTS = {
+      cinema:    { label: 'Cinema',    cmp: LayoutCinema },
+      flowfirst: { label: 'Flow-first',cmp: LayoutFlowFirst },
+      agentflow: { label: 'Agent+Flow',cmp: LayoutAgentFlow },
+      operator:  { label: 'Operator',  cmp: LayoutOperator },
+      console:   { label: 'Console',   cmp: LayoutConsole },
+    };
+    const LayoutCmp = (LAYOUTS[layout] || LAYOUTS.cinema).cmp;
+
+    React.useEffect(() => { applyAccent(accent); }, [accent]);
+
+    // Tweaks protocol
+    React.useEffect(() => {
+      const onMsg = (e) => {
+        if (e.data?.type === '__activate_edit_mode') setTweaksOn(true);
+        if (e.data?.type === '__deactivate_edit_mode') setTweaksOn(false);
+      };
+      window.addEventListener('message', onMsg);
+      window.parent.postMessage({ type: '__edit_mode_available' }, '*');
+      return () => window.removeEventListener('message', onMsg);
+    }, []);
+
+    const persist = (edits) => {
+      window.parent.postMessage({ type: '__edit_mode_set_keys', edits }, '*');
+    };
+
+    // Each layout gets its own lidar state so users can compare with/without
+    // per board, but we use a single shared "lidar" default for consistency.
+    const W = 1400, H = 900;
+
+    // Wrap layouts in a scaled-down thumbnail for the artboard; the focus
+    // overlay scales them back up.
+    const Frame = ({ children }) => (
+      <div style={{ width: '100%', height: '100%', overflow: 'hidden',
+        fontFamily: 'Inter, var(--sans)' }}>{children}</div>
+    );
+
+    return (
+      <>
+        <div style={{ width: '100vw', height: '100vh' }}>
+          <AppShell>
+            <LayoutCmp lidar={lidar} setLidar={setLidar} agentStyle={agentStyle} armPos={armPos}/>
+          </AppShell>
+        </div>
+
+        {/* Tweaks panel */}
+        <div className={'tweak-panel' + (tweaksOn ? ' on' : '')}>
+          <h4>Tweaks</h4>
+          <div className="tweak-row">
+            <label>Layout</label>
+            <div className="segs" style={{ flexWrap: 'wrap', gap: 2 }}>
+              {Object.entries(LAYOUTS).map(([k, v]) => (
+                <button key={k} className={layout === k ? 'on' : ''}
+                  onClick={() => { setLayout(k); persist({ layout: k }); }}
+                  style={{ flex: '1 1 30%', fontSize: 10.5 }}>{v.label}</button>
+              ))}
+            </div>
+          </div>
+          <div className="tweak-row">
+            <label>Accent color</label>
+            <div className="swatches">
+              {Object.entries(ACCENTS).map(([k, v]) => (
+                <div key={k}
+                  className={'swatch' + (accent === k ? ' on' : '')}
+                  style={{ background: v.accent }}
+                  onClick={() => { setAccent(k); persist({ accent: k }); }}
+                  title={k}/>
+              ))}
+            </div>
+          </div>
+          <div className="tweak-row">
+            <label>Agent panel style (layout A)</label>
+            <div className="segs">
+              <button className={agentStyle === 'chat' ? 'on' : ''} onClick={() => { setAgentStyle('chat'); persist({ agentStyle: 'chat' }); }}>Chat bubbles</button>
+              <button className={agentStyle === 'terminal' ? 'on' : ''} onClick={() => { setAgentStyle('terminal'); persist({ agentStyle: 'terminal' }); }}>Terminal</button>
+            </div>
+          </div>
+          <div className="tweak-row">
+            <label>Arm controller placement</label>
+            <div className="segs">
+              <button className={armPos === 'stacked' ? 'on' : ''} onClick={() => { setArmPos('stacked'); persist({ armPos: 'stacked' }); }}>Stacked</button>
+              <button className={armPos === 'tabs' ? 'on' : ''} onClick={() => { setArmPos('tabs'); persist({ armPos: 'tabs' }); }}>Tabs</button>
+              <button className={armPos === 'sidebar' ? 'on' : ''} onClick={() => { setArmPos('sidebar'); persist({ armPos: 'sidebar' }); }}>Sidebar</button>
+            </div>
+          </div>
+          <div className="tweak-row toggle">
+            <label>LIDAR overlay</label>
+            <div className={'sw' + (lidar ? ' on' : '')} onClick={() => { const v = !lidar; setLidar(v); persist({ lidar: v }); }}/>
+          </div>
+        </div>
+      </>
+    );
+  }
+
+  ReactDOM.createRoot(document.getElementById('root')).render(<App/>);
+</script>
+</body>
+</html>
