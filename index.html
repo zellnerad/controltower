@@ -2,9 +2,39 @@
 <html>
 <head>
   <meta charset="UTF-8">
-  <meta http-equiv="refresh" content="0; url=Robot%20Live%20View%20(standalone).html">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Control Tower</title>
+  <style>
+    body { font-family: -apple-system, sans-serif; background: #0f0f0f; color: #fff; margin: 0; padding: 40px; }
+    h1 { font-size: 24px; margin-bottom: 8px; }
+    p { color: #888; margin-bottom: 32px; }
+    .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 16px; }
+    a { display: block; background: #1a1a1a; border: 1px solid #2a2a2a; border-radius: 12px; padding: 24px; color: #fff; text-decoration: none; transition: border-color 0.15s; }
+    a:hover { border-color: #555; }
+    .label { font-size: 13px; color: #666; margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.05em; }
+    .name { font-size: 17px; font-weight: 500; }
+  </style>
 </head>
 <body>
-  <a href="Robot%20Live%20View%20(standalone).html">Robot Live View</a>
+  <h1>Control Tower</h1>
+  <p>Robot Operations — Command &amp; Control</p>
+  <div class="grid">
+    <a href="Robot%20Live%20View%20(standalone).html">
+      <div class="label">Main App</div>
+      <div class="name">Robot Live View</div>
+    </a>
+    <a href="Open%20Alerts%20Panel.html">
+      <div class="label">New</div>
+      <div class="name">Open Alerts Panel</div>
+    </a>
+    <a href="Robot%20Mobile%20App.html">
+      <div class="label">Mobile</div>
+      <div class="name">Robot Mobile App</div>
+    </a>
+    <a href="Robot%20Live%20View-print.html">
+      <div class="label">Print</div>
+      <div class="name">Robot Live View — Print</div>
+    </a>
+  </div>
 </body>
 </html>
