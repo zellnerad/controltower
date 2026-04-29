@@ -1281,6 +1281,101 @@ function TimelineDrawer({ onClose }) {
 // ═══ LAYOUT B — Cinema ════════════════════════════════════════
 // Camera full-bleed. Chat is a right sidebar that opens/closes.
 // Time top-right. Bottom-center shows 3 ops actions (not a log).
+// AbortTakeoverBanner — appears across the camera view when the operator
+// aborts the running flow. Hands off control with agent-voice copy that
+// instructs the operator to drive manually.
+function AbortTakeoverBanner({ robotId, flowName, onResume, rightEdge = 0 }) {
+  const [elapsed, setElapsed] = React.useState(0);
+  React.useEffect(() => {
+    const id = setInterval(() => setElapsed(e => e + 1), 1000);
+    return () => clearInterval(id);
+  }, []);
+  const mm = String(Math.floor(elapsed / 60)).padStart(2, '0');
+  const ss = String(elapsed % 60).padStart(2, '0');
+  return (
+    <div style={{ position: 'absolute', top: 56, left: 12, right: rightEdge + 12, zIndex: 40,
+      transition: 'right .22s ease' }}>
+      <div style={{
+        display: 'flex', alignItems: 'stretch', gap: 0,
+        background: 'linear-gradient(180deg, rgba(220,38,38,.96) 0%, rgba(185,28,28,.96) 100%)',
+        border: '1px solid rgba(255,255,255,.18)',
+        borderRadius: 10,
+        boxShadow: '0 12px 32px rgba(220,38,38,.35), 0 0 0 1px rgba(220,38,38,.4)',
+        overflow: 'hidden',
+        animation: 'abortBannerIn .28s cubic-bezier(.2,.9,.3,1)',
+      }}>
+        {/* Pulsing accent strip */}
+        <div style={{ width: 4, background: '#fff', opacity: .85,
+          animation: 'abortPulse 1.6s ease-in-out infinite' }}/>
+        {/* Hazard icon */}
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center',
+          padding: '0 14px 0 16px' }}>
+          <div style={{ width: 36, height: 36, borderRadius: 8,
+            background: 'rgba(255,255,255,.16)', border: '1px solid rgba(255,255,255,.28)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M10.3 3.86a2 2 0 013.4 0l8.5 14.14A2 2 0 0120.5 21h-17a2 2 0 01-1.7-3L10.3 3.86z"/>
+              <line x1="12" y1="9" x2="12" y2="13"/>
+              <line x1="12" y1="17" x2="12.01" y2="17"/>
+            </svg>
+          </div>
+        </div>
+        {/* Copy block */}
+        <div style={{ flex: 1, padding: '10px 14px 10px 0', minWidth: 0 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 2 }}>
+            <span className="mono" style={{ fontSize: 9.5, letterSpacing: 1.4, color: '#fff', opacity: .9,
+              padding: '2px 6px', background: 'rgba(0,0,0,.22)', borderRadius: 3 }}>
+              FLOW STOPPED
+            </span>
+            <span className="mono" style={{ fontSize: 10, color: '#fff', opacity: .8, letterSpacing: .5 }}>
+              {robotId}
+            </span>
+            <span style={{ fontSize: 10, color: '#fff', opacity: .55 }}>·</span>
+            <span className="mono" style={{ fontSize: 10, color: '#fff', opacity: .8, letterSpacing: .5 }}>
+              {flowName}
+            </span>
+            <span style={{ flex: 1 }}/>
+            <span className="mono" style={{ fontSize: 10, color: '#fff', opacity: .8, letterSpacing: .8 }}>
+              MANUAL · {mm}:{ss}
+            </span>
+          </div>
+          <div style={{ fontSize: 14, fontWeight: 600, color: '#fff', lineHeight: 1.35,
+            letterSpacing: -.1 }}>
+            You're driving {robotId} now. Take the wheel — flow is paused, joints are unlocked.
+          </div>
+          <div style={{ fontSize: 12, color: 'rgba(255,255,255,.85)', marginTop: 3, lineHeight: 1.4 }}>
+            Use the joystick or arrow keys to move. When you're done, hand back to autonomy and I'll
+            re-plan from this position.
+          </div>
+        </div>
+        {/* Actions */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '0 12px',
+          borderLeft: '1px solid rgba(255,255,255,.18)' }}>
+          <button onClick={onResume}
+            style={{ all: 'unset', cursor: 'pointer', fontSize: 12, fontWeight: 600,
+              color: '#7f1d1d', background: '#fff', padding: '8px 14px', borderRadius: 6,
+              letterSpacing: -.1,
+              boxShadow: '0 2px 8px rgba(0,0,0,.18)' }}
+            onMouseEnter={(e) => e.currentTarget.style.background = '#fef2f2'}
+            onMouseLeave={(e) => e.currentTarget.style.background = '#fff'}>
+            Hand back to autonomy
+          </button>
+        </div>
+      </div>
+      <style>{`
+        @keyframes abortBannerIn {
+          from { opacity: 0; transform: translateY(-6px); }
+          to   { opacity: 1; transform: translateY(0); }
+        }
+        @keyframes abortPulse {
+          0%, 100% { opacity: .55; }
+          50%      { opacity: 1; }
+        }
+      `}</style>
+    </div>
+  );
+}
+
 // FleetTopNav — full-width top navigation with a tab per Billie.
 // Selected tab is white text w/ accent underline; others dim; status dot per tab.
 function FleetTopNav({ fleet, selectedId, onSelect, currentRoom, rightEdge = 0 }) {
@@ -1432,6 +1527,7 @@ function FleetSwitcher({ fleet, selectedId, onSelect, currentRoom, selected }) {
 const APP_TABS = [
   { id: 'home',       label: 'Home' },
   { id: 'fleet',      label: 'Live View' },
+  { id: 'alerts',     label: 'Open Alerts' },
   { id: 'dispatcher', label: 'Dispatcher' },
   { id: 'operator',   label: 'Operator Console', active: true },
   { id: 'reports',    label: 'Customers Reports' },
@@ -1527,6 +1623,7 @@ function AppShell({ children }) {
           : tab === 'dispatcher' ? <DispatcherView/>
           : tab === 'home' ? <HomeView goto={setTab}/>
           : tab === 'fleet' ? <FleetView goto={setTab}/>
+          : tab === 'alerts' ? <AlertsView goto={setTab}/>
           : tab === 'rooms' ? <RoomsApp goto={setTab}/>
           : tab === 'robots' ? <RobotsApp goto={setTab}/>
           : tab === 'reports' ? <ReportsView goto={setTab}/>
@@ -1572,64 +1669,12 @@ function FleetView({ goto }) {
   return (
     <div style={{ width: '100%', height: '100%', overflow: 'hidden',
       background: '#fbfbfa', color: '#17171a', fontFamily: 'Inter, var(--sans)',
-      display: 'flex', flexDirection: 'column' }}>
-      {/* breadcrumb bar */}
-      <div style={{ padding: '10px 24px', display: 'flex', alignItems: 'center', gap: 12,
-        background: '#ffffff', borderBottom: '1px solid rgba(24,24,27,.05)' }}>
-        <span style={{ fontFamily: '"Helvetica Neue", Helvetica, Arial, sans-serif', fontSize: 15,
-          color: 'rgba(255,255,255,.82)', fontStyle: 'normal' }}>Live view</span>
-        <span style={{ flex: 1 }}/>
-        <button onClick={() => setDensity(d => d === 3 ? 2 : d === 2 ? 4 : 3)}
-          style={{ all: 'unset', cursor: 'pointer',
-            padding: '6px 12px', borderRadius: 6, fontSize: 11.5, fontWeight: 600,
-            color: 'rgba(24,24,27,.72)',
-            border: '1px solid rgba(24,24,27,.09)',
-            background: 'rgba(24,24,27,.035)' }}>
-          ▦ {density} cols
-        </button>
-        <span className="mono" style={{ fontSize: 10.5, color: 'rgba(24,24,27,.48)', letterSpacing: .8 }}>
-          Today · {clock}
-        </span>
-      </div>
+      display: 'flex', flexDirection: 'row' }}>
+      {/* main column */}
+      <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column' }}>
+      {/* top utility bar removed — density + clock now live in the title row */}
 
-      {/* hotel filter chips */}
-      <div style={{ padding: '12px 40px 0', background: '#fbfbfa',
-        display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-        <span className="mono" style={{ fontSize: 9.5, letterSpacing: 1.2,
-          color: 'rgba(24,24,27,.4)', marginRight: 4 }}>PROPERTY</span>
-        {sites.map(s => {
-          const on = siteFilter === s;
-          const count = s === 'All sites'
-            ? FLEET_FEEDS.length
-            : FLEET_FEEDS.filter(f => f.site === s).length;
-          const liveN = s === 'All sites'
-            ? FLEET_FEEDS.filter(f => f.state === 'live').length
-            : FLEET_FEEDS.filter(f => f.site === s && f.state === 'live').length;
-          // little flag per hotel, based on the first feed at that site
-          const flag = s === 'All sites' ? null
-            : ({ 'Marriott Rome': '🇮🇹', 'Hilton Berlin': '🇩🇪',
-                 'Cardo Brussels': '🇧🇪', 'Seminaris Potsdam': '🇩🇪' })[s];
-          return (
-            <button key={s} onClick={() => setSiteFilter(s)}
-              style={{ all: 'unset', cursor: 'pointer',
-                padding: '6px 12px', borderRadius: 999,
-                fontSize: 12, fontWeight: on ? 600 : 500,
-                color: on ? '#fff' : 'rgba(24,24,27,.72)',
-                background: on ? '#17171a' : '#ffffff',
-                border: `1px solid ${on ? '#17171a' : 'rgba(24,24,27,.09)'}`,
-                display: 'inline-flex', alignItems: 'center', gap: 6,
-                transition: 'background .12s, color .12s, border-color .12s' }}>
-              {flag && <span style={{ fontSize: 12 }}>{flag}</span>}
-              <span>{s}</span>
-              <span className="mono tnum" style={{ fontSize: 10,
-                color: on ? 'rgba(255,255,255,.55)' : 'rgba(24,24,27,.42)',
-                fontWeight: 500 }}>
-                {liveN}/{count}
-              </span>
-            </button>
-          );
-        })}
-      </div>
+      {/* hotel filter chips moved into the content area, under the H1 title */}
 
       <div style={{ flex: 1, minHeight: 0, overflow: 'auto', padding: '22px 40px 40px' }}>
         {/* title */}
@@ -1657,10 +1702,59 @@ function FleetView({ goto }) {
             <div className="mono" style={{ fontSize: 10.5, color: 'rgba(24,24,27,.35)', letterSpacing: .8 }}>
               {feeds.length - liveCount} OFFLINE
             </div>
+            <button onClick={() => setDensity(d => d === 3 ? 2 : d === 2 ? 4 : 3)}
+              style={{ all: 'unset', cursor: 'pointer',
+                padding: '8px 14px', borderRadius: 8, fontSize: 11.5, fontWeight: 600,
+                color: 'rgba(24,24,27,.72)',
+                border: '1px solid rgba(24,24,27,.09)',
+                background: 'rgba(24,24,27,.035)' }}>
+              ▦ {density} cols
+            </button>
+            <span className="mono" style={{ fontSize: 10.5, color: 'rgba(24,24,27,.48)', letterSpacing: .8 }}>
+              Today · {clock}
+            </span>
           </div>
         </div>
 
         <div style={{ borderTop: '1px dashed rgba(24,24,27,.09)', marginBottom: 20 }}/>
+
+        {/* hotel filter chips — under the title */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap',
+          marginBottom: 20 }}>
+          <span className="mono" style={{ fontSize: 9.5, letterSpacing: 1.2,
+            color: 'rgba(24,24,27,.4)', marginRight: 4 }}>PROPERTY</span>
+          {sites.map(s => {
+            const on = siteFilter === s;
+            const count = s === 'All sites'
+              ? FLEET_FEEDS.length
+              : FLEET_FEEDS.filter(f => f.site === s).length;
+            const liveN = s === 'All sites'
+              ? FLEET_FEEDS.filter(f => f.state === 'live').length
+              : FLEET_FEEDS.filter(f => f.site === s && f.state === 'live').length;
+            const flag = s === 'All sites' ? null
+              : ({ 'Marriott Rome': '🇮🇹', 'Hilton Berlin': '🇩🇪',
+                   'Cardo Brussels': '🇧🇪', 'Seminaris Potsdam': '🇩🇪' })[s];
+            return (
+              <button key={s} onClick={() => setSiteFilter(s)}
+                style={{ all: 'unset', cursor: 'pointer',
+                  padding: '6px 12px', borderRadius: 999,
+                  fontSize: 12, fontWeight: on ? 600 : 500,
+                  color: on ? '#fff' : 'rgba(24,24,27,.72)',
+                  background: on ? '#17171a' : '#ffffff',
+                  border: `1px solid ${on ? '#17171a' : 'rgba(24,24,27,.09)'}`,
+                  display: 'inline-flex', alignItems: 'center', gap: 6,
+                  transition: 'background .12s, color .12s, border-color .12s' }}>
+                {flag && <span style={{ fontSize: 12 }}>{flag}</span>}
+                <span>{s}</span>
+                <span className="mono tnum" style={{ fontSize: 10,
+                  color: on ? 'rgba(255,255,255,.55)' : 'rgba(24,24,27,.42)',
+                  fontWeight: 500 }}>
+                  {liveN}/{count}
+                </span>
+              </button>
+            );
+          })}
+        </div>
 
         {/* grid */}
         <div style={{ display: 'grid',
@@ -1672,12 +1766,32 @@ function FleetView({ goto }) {
       </div>
 
       {focus && <FleetFocus feed={focus} onClose={() => setFocus(null)} goto={goto}/>}
+      </div>
+      {/* agent sidebar */}
+      <FleetAgentPanel goto={goto}/>
     </div>
   );
 }
 
 function FleetTile({ feed, tick, idx, onOpen }) {
   const isLive = feed.state === 'live';
+  // Robots with open alerts (matches TRIAGE_ALERTS in Billie Boss panel) → tile is highlighted red.
+  const ALERTED = { 'BILLIE-08': 'high', 'BILLIE-14': 'high', 'BILLIE-22': 'med', 'BILLIE-21': 'med', 'BILLIE-19': 'low', 'BILLIE-11': 'low' };
+  const ALERT_LABELS = {
+    'BILLIE-08': "Door won't open",
+    'BILLIE-14': 'Sensor recal needed',
+    'BILLIE-22': 'Battery low · 18%',
+    'BILLIE-21': 'Lift wait > 90s',
+    'BILLIE-19': 'Trash bin full',
+    'BILLIE-11': 'Guest unconfirmed',
+  };
+  const alertSev = ALERTED[feed.billie];
+  const alertLabel = ALERT_LABELS[feed.billie];
+  const ALERT_TONE = {
+    high: { tone: '#ef4444', soft: 'rgba(239,68,68,.18)', glow: 'rgba(239,68,68,.35)', label: 'HIGH' },
+    med:  { tone: '#f59e0b', soft: 'rgba(245,158,11,.2)',  glow: 'rgba(245,158,11,.3)',  label: 'MED'  },
+    low:  { tone: '#a3a3a3', soft: 'rgba(24,24,27,.12)',   glow: 'rgba(24,24,27,.15)',   label: 'LOW'  },
+  }[alertSev];
   // scroll the "feed" image horizontally to fake motion
   const offset = isLive ? ((tick * 3 + idx * 17) % 100) : 0;
   // different gradient scenes per cam type
@@ -1692,11 +1806,36 @@ function FleetTile({ feed, tick, idx, onOpen }) {
 
   return (
     <div style={{ background: '#ffffff',
-      border: isLive ? '1px solid rgba(251,191,36,.2)' : '1px solid rgba(24,24,27,.06)',
+      border: alertSev ? `1px solid ${ALERT_TONE.tone}` : isLive ? '1px solid rgba(251,191,36,.2)' : '1px solid rgba(24,24,27,.06)',
+      boxShadow: alertSev ? `0 0 0 3px ${ALERT_TONE.soft}, 0 4px 14px ${ALERT_TONE.glow}` : 'none',
       borderRadius: 10, overflow: 'hidden', display: 'flex', flexDirection: 'column',
-      transition: 'border-color .15s, transform .15s' }}
+      transition: 'border-color .15s, transform .15s, box-shadow .15s',
+      position: 'relative' }}
       onMouseEnter={(e) => e.currentTarget.style.transform = 'translateY(-1px)'}
       onMouseLeave={(e) => e.currentTarget.style.transform = 'translateY(0)'}>
+      {alertSev && (
+        <div style={{ position: 'absolute', top: -1, left: -1, right: -1, height: 26,
+          background: `linear-gradient(180deg, ${ALERT_TONE.tone} 0%, ${ALERT_TONE.tone} 60%, transparent 100%)`,
+          opacity: alertSev === 'high' ? .9 : .75,
+          zIndex: 4, pointerEvents: 'none',
+          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+          padding: '0 10px', color: '#fff' }}>
+          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6,
+            fontSize: 10.5, fontWeight: 700, letterSpacing: .3,
+            textShadow: '0 1px 2px rgba(0,0,0,.25)' }}>
+            <svg width="11" height="11" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M7 1.5L.8 12.5h12.4L7 1.5z"/><path d="M7 5.5v3.2M7 10.3v.01"/>
+            </svg>
+            ALERT · {alertLabel}
+          </span>
+          <span className="mono" style={{ fontSize: 9, fontWeight: 700, letterSpacing: .8,
+            padding: '1px 6px', borderRadius: 3,
+            background: 'rgba(255,255,255,.22)',
+            border: '1px solid rgba(255,255,255,.35)' }}>
+            {ALERT_TONE.label}
+          </span>
+        </div>
+      )}
       {/* feed */}
       <div style={{ position: 'relative', aspectRatio: '16/10',
         background: feed.photo ? '#fbfbfa' : scene, overflow: 'hidden',
@@ -1738,7 +1877,7 @@ function FleetTile({ feed, tick, idx, onOpen }) {
           const flag = CITY_FLAGS[city] || '📍';
           const billieShort = (feed.billie || '').replace('BILLIE-', 'Billie ');
           return (
-            <div style={{ position: 'absolute', top: 10, left: 12,
+            <div style={{ position: 'absolute', top: alertSev ? 32 : 10, left: 12,
               display: 'inline-flex', alignItems: 'center', gap: 6,
               padding: '4px 9px', borderRadius: 999,
               background: 'rgba(10,10,12,.72)', border: '1px solid rgba(24,24,27,.08)',
@@ -1761,7 +1900,7 @@ function FleetTile({ feed, tick, idx, onOpen }) {
         })()}
 
         {/* top overlays */}
-        <div style={{ position: 'absolute', top: 10, left: 12, right: 12,
+        <div style={{ position: 'absolute', top: alertSev ? 32 : 10, left: 12, right: 12,
           display: 'flex', alignItems: 'center', gap: 8, pointerEvents: 'none' }}>
           <span style={{ flex: 1 }}/>
           <span className="mono" style={{ fontSize: 10, letterSpacing: 1.2,
@@ -1813,7 +1952,7 @@ function FleetTile({ feed, tick, idx, onOpen }) {
         background: '#fbfbfa' }}>
         {isLive ? (
           <>
-            <FleetAction label="open"  tone="primary" onClick={onOpen}/>
+            <FleetAction label="open" onClick={onOpen}/>
             <FleetAction label="❚❚ pause"/>
             <FleetAction label="abort" tone="danger"/>
             <span style={{ flex: 1 }}/>
@@ -1847,6 +1986,489 @@ function FleetAction({ label, tone, onClick }) {
       background: bg, border: `1px solid ${border}`, color, letterSpacing: .2 }}>
       {label}
     </button>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════
+// FleetAgentPanel — agent sidebar on the Live View, shows current
+// open alerts (Billie-08 can't open the door) + chat with Billie Boss
+// ═══════════════════════════════════════════════════════════════
+function FleetAgentPanel({ goto }) {
+  const [tab, setTab] = React.useState('alerts'); // alerts | chat
+  const [collapsed, setCollapsed] = React.useState(false);
+  const [acked, setAcked] = React.useState(false);
+  const [thinking, setThinking] = React.useState(false);
+  const [reply, setReply] = React.useState(null);
+  const [input, setInput] = React.useState('');
+  const [chat, setChat] = React.useState([
+    { role: 'agent', text: 'Heads up — Billie 08 has been stalled at room 1216 for 90 seconds. The arm tried the lever twice; the door isn\'t opening. I think the latch is engaged from the inside.' },
+  ]);
+  const scrollRef = React.useRef(null);
+  React.useEffect(() => {
+    if (scrollRef.current) scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+  }, [chat, thinking]);
+
+  const sendChat = async () => {
+    const text = input.trim();
+    if (!text || thinking) return;
+    setInput('');
+    setChat(c => [...c, { role: 'user', text }]);
+    setThinking(true);
+    try {
+      const prompt = `You are Billie Boss, the agent watching the fleet from the Live View. The active situation is: Billie 08 is stalled at room 1216 (Marriott Rome) — the door is latched from inside and the robot can\'t open it. The operator just typed: "${text}". Reply in 1-2 short sentences as the agent. Be concrete; suggest a next step or confirm an action. No emoji.`;
+      const r = await window.claude.complete(prompt);
+      setChat(c => [...c, { role: 'agent', text: r.trim() }]);
+    } catch {
+      setChat(c => [...c, { role: 'agent', text: 'Comms degraded — retry.', error: true }]);
+    } finally { setThinking(false); }
+  };
+
+  const askWhy = async () => {
+    if (thinking || reply) return;
+    setThinking(true);
+    try {
+      const prompt = 'You are Billie Boss, the fleet agent. The operator clicked "Why?" on this alert: Billie 08 stalled trying to enter room 1216 — door not opening despite two arm attempts on the lever. Explain in 2 short sentences what you observed and what you think the cause is. No emoji.';
+      const r = await window.claude.complete(prompt);
+      setReply(r.trim());
+    } catch { setReply('Comms degraded — retry.'); }
+    finally { setThinking(false); }
+  };
+
+  if (collapsed) {
+    return (
+      <div style={{ width: 44, flexShrink: 0, borderLeft: '1px solid rgba(24,24,27,.06)',
+        background: '#ffffff', display: 'flex', flexDirection: 'column', alignItems: 'center',
+        padding: '14px 0', gap: 14 }}>
+        <button onClick={() => setCollapsed(false)}
+          title="Open Billie Boss"
+          style={{ all: 'unset', cursor: 'pointer', width: 28, height: 28, borderRadius: 6,
+            background: '#17171a', color: '#fbbf24',
+            display: 'inline-flex', alignItems: 'center', justifyContent: 'center', position: 'relative' }}>
+          <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.7">
+            <path d="M14 8a6 6 0 01-9 5l-3 1 1-3a6 6 0 1111-3z"/>
+          </svg>
+          {!acked && (
+            <span style={{ position: 'absolute', top: -3, right: -3, width: 10, height: 10,
+              borderRadius: 5, background: '#ef4444', border: '2px solid #fff' }}/>
+          )}
+        </button>
+        <div className="mono" style={{ writingMode: 'vertical-rl', transform: 'rotate(180deg)',
+          fontSize: 9.5, color: 'rgba(24,24,27,.45)', letterSpacing: 1.5 }}>
+          BILLIE BOSS
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <aside style={{ width: 340, flexShrink: 0, borderLeft: '1px solid rgba(24,24,27,.06)',
+      background: '#ffffff', display: 'flex', flexDirection: 'column', minHeight: 0 }}>
+      {/* header */}
+      <div style={{ padding: '14px 16px 10px', display: 'flex', alignItems: 'center', gap: 10,
+        borderBottom: '1px solid rgba(24,24,27,.05)' }}>
+        <div style={{ width: 28, height: 28, borderRadius: 6, background: '#17171a',
+          color: '#fbbf24', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}>
+          <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.7">
+            <path d="M14 8a6 6 0 01-9 5l-3 1 1-3a6 6 0 1111-3z"/>
+          </svg>
+        </div>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ fontSize: 13, fontWeight: 600, color: '#17171a', letterSpacing: -.1 }}>
+            Billie Boss
+          </div>
+          <div className="mono" style={{ fontSize: 9.5, color: 'rgba(24,24,27,.5)', letterSpacing: .8,
+            display: 'flex', alignItems: 'center', gap: 5 }}>
+            <span style={{ width: 5, height: 5, borderRadius: 3, background: '#22c55e' }}/>
+            WATCHING · 14 LIVE
+          </div>
+        </div>
+        <button onClick={() => setCollapsed(true)}
+          style={{ all: 'unset', cursor: 'pointer', padding: 4,
+            color: 'rgba(24,24,27,.45)', borderRadius: 4 }}
+          title="Collapse">
+          <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round">
+            <path d="M9 3l-4 4 4 4"/>
+          </svg>
+        </button>
+      </div>
+
+      {/* tab pills */}
+      <div style={{ display: 'flex', padding: '8px 12px 0', gap: 4 }}>
+        {[
+          { v: 'alerts',     label: 'Alerts',     n: 6 },
+          { v: 'dispatcher', label: 'Dispatcher', n: 7 },
+          { v: 'chat',       label: 'Ask',        n: null },
+        ].map(t => {
+          const on = tab === t.v;
+          return (
+            <button key={t.v} onClick={() => setTab(t.v)}
+              style={{ all: 'unset', cursor: 'pointer',
+                padding: '5px 10px', borderRadius: 6, fontSize: 11.5, fontWeight: 600,
+                color: on ? '#17171a' : 'rgba(24,24,27,.55)',
+                background: on ? 'rgba(24,24,27,.06)' : 'transparent',
+                display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+              {t.label}
+              {t.n != null && (
+                <span className="mono" style={{ fontSize: 9.5, padding: '1px 5px', borderRadius: 3,
+                  background: t.v === 'alerts' && !acked ? '#ef4444' : 'rgba(24,24,27,.1)',
+                  color: t.v === 'alerts' && !acked ? '#fff' : 'rgba(24,24,27,.6)',
+                  fontWeight: 700, letterSpacing: .3 }}>
+                  {t.n}
+                </span>
+              )}
+            </button>
+          );
+        })}
+      </div>
+
+      {/* body */}
+      {tab === 'alerts' ? (
+        <AlertsTriage goto={goto} thinking={thinking} reply={reply} askWhy={askWhy} setAcked={setAcked}/>
+      ) : tab === 'dispatcher' ? (
+        <DispatcherMini goto={goto}/>
+      ) : (
+        // chat view
+        <div style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column' }}>
+          <div ref={scrollRef} style={{ flex: 1, minHeight: 0, overflow: 'auto',
+            padding: '12px 14px', display: 'flex', flexDirection: 'column', gap: 10 }}>
+            {chat.map((m, i) => (
+              <div key={i} style={{ display: 'flex', gap: 8,
+                flexDirection: m.role === 'user' ? 'row-reverse' : 'row' }}>
+                {m.role === 'agent' && (
+                  <span style={{ width: 22, height: 22, borderRadius: 4, flexShrink: 0,
+                    background: '#17171a', color: '#fbbf24',
+                    display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                    fontSize: 9, fontWeight: 700, letterSpacing: .2 }}>BB</span>
+                )}
+                <div style={{ maxWidth: '82%', fontSize: 12.5, lineHeight: 1.45,
+                  padding: '7px 10px', borderRadius: 9,
+                  background: m.role === 'user' ? '#17171a' : 'rgba(24,24,27,.05)',
+                  color: m.role === 'user' ? '#fff' : '#17171a',
+                  borderBottomRightRadius: m.role === 'user' ? 3 : 9,
+                  borderBottomLeftRadius:  m.role === 'user' ? 9 : 3 }}>
+                  {m.text}
+                </div>
+              </div>
+            ))}
+            {thinking && (
+              <div style={{ display: 'flex', gap: 8 }}>
+                <span style={{ width: 22, height: 22, borderRadius: 4, flexShrink: 0,
+                  background: '#17171a', color: '#fbbf24',
+                  display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                  fontSize: 9, fontWeight: 700 }}>BB</span>
+                <div style={{ padding: '8px 10px', borderRadius: 9, background: 'rgba(24,24,27,.05)',
+                  display: 'flex', gap: 3, alignItems: 'center' }}>
+                  {[0, 1, 2].map(i => (
+                    <span key={i} style={{ width: 5, height: 5, borderRadius: 3,
+                      background: 'rgba(24,24,27,.4)',
+                      animation: `td 1s ${i * .15}s infinite ease-in-out` }}/>
+                  ))}
+                  <style>{'@keyframes td { 0%,60%,100% { opacity:.3 } 30% { opacity:.9 } }'}</style>
+                </div>
+              </div>
+            )}
+          </div>
+          <div style={{ borderTop: '1px solid rgba(24,24,27,.06)',
+            padding: '8px 10px', display: 'flex', alignItems: 'center', gap: 8 }}>
+            <input value={input} onChange={(e) => setInput(e.target.value)}
+              onKeyDown={(e) => { if (e.key === 'Enter') sendChat(); }}
+              placeholder={thinking ? 'thinking…' : 'Ask Billie Boss anything…'}
+              style={{ flex: 1, border: 'none', outline: 'none', background: 'transparent',
+                fontSize: 12.5, color: '#17171a', fontFamily: 'inherit' }}/>
+            <button onClick={sendChat} disabled={!input.trim() || thinking}
+              style={{ all: 'unset', cursor: input.trim() && !thinking ? 'pointer' : 'default',
+                width: 26, height: 26, borderRadius: 5,
+                background: input.trim() && !thinking ? '#17171a' : 'rgba(24,24,27,.08)',
+                color: input.trim() && !thinking ? '#fbbf24' : 'rgba(24,24,27,.4)',
+                display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}>
+              <svg width="11" height="11" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M2 7h10M8 3l4 4-4 4"/>
+              </svg>
+            </button>
+          </div>
+        </div>
+      )}
+    </aside>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════
+// AlertsTriage — counts strip + active alert + grouped queue.
+// Used as the body of the "Alerts" tab in the Billie Boss panel.
+// ═══════════════════════════════════════════════════════════════
+const TRIAGE_ALERTS = [
+  { id: 'A-2041', flag: '🇮🇹', city: 'Rome',  robot: 'BILLIE-08', room: '1216', issue: "Door won't open",                  why: 'Privacy latch likely engaged from inside.', stalled: '1m 32s', attempts: 2, sev: 'high' },
+  { id: 'A-2040', flag: '🇮🇹', city: 'Rome',  robot: 'BILLIE-14', room: '1118', issue: 'Depth sensor recalibration',       why: 'ToF channel 3 drift over threshold.',       stalled: '6m 04s', attempts: 1, sev: 'high' },
+  { id: 'A-2039', flag: '🇫🇷', city: 'Paris', robot: 'BILLIE-22', room: '0612', issue: 'Battery low · 18%',                why: 'Heavy floor 6 routes drained pack faster.', stalled: '—',     attempts: 0, sev: 'med'  },
+  { id: 'A-2038', flag: '🇮🇹', city: 'Rome',  robot: 'BILLIE-21', room: '0908', issue: 'Lift wait > 90s',                  why: 'Lift A out of service. Re-routing via B.',   stalled: '2m 11s', attempts: 0, sev: 'med'  },
+  { id: 'A-2037', flag: '🇫🇷', city: 'Paris', robot: 'BILLIE-19', room: '0204', issue: 'Trash bin full',                   why: 'Service bay 2 backed up since 09:40.',       stalled: '—',     attempts: 0, sev: 'low'  },
+  { id: 'A-2036', flag: '🇮🇹', city: 'Rome',  robot: 'BILLIE-11', room: '1402', issue: 'Guest request unconfirmed',        why: 'Guest did not confirm towels delivery.',     stalled: '—',     attempts: 0, sev: 'low'  },
+];
+
+const TRIAGE_SEV = {
+  high: { tone: '#ef4444', label: 'HIGH' },
+  med:  { tone: '#f59e0b', label: 'MED'  },
+  low:  { tone: 'rgba(24,24,27,.45)', label: 'LOW' },
+};
+
+function AlertsTriage({ goto, thinking, reply, askWhy, setAcked }) {
+  const active = TRIAGE_ALERTS[0];
+  const queue = TRIAGE_ALERTS.slice(1);
+  const counts = {
+    high: TRIAGE_ALERTS.filter(a => a.sev === 'high').length,
+    med:  TRIAGE_ALERTS.filter(a => a.sev === 'med').length,
+    low:  TRIAGE_ALERTS.filter(a => a.sev === 'low').length,
+  };
+  const groups = [
+    { sev: 'high', label: 'HIGH',   items: queue.filter(a => a.sev === 'high') },
+    { sev: 'med',  label: 'MEDIUM', items: queue.filter(a => a.sev === 'med')  },
+    { sev: 'low',  label: 'LOW',    items: queue.filter(a => a.sev === 'low')  },
+  ];
+
+  return (
+    <div style={{ flex: 1, minHeight: 0, overflow: 'auto',
+      display: 'flex', flexDirection: 'column' }}>
+      {/* counts strip */}
+      <div style={{ display: 'flex', gap: 6, padding: '12px 14px 8px' }}>
+        {[
+          { tone: TRIAGE_SEV.high.tone, n: counts.high, label: 'HIGH' },
+          { tone: TRIAGE_SEV.med.tone,  n: counts.med,  label: 'MED'  },
+          { tone: TRIAGE_SEV.low.tone,  n: counts.low,  label: 'LOW'  },
+        ].map(c => (
+          <div key={c.label} style={{ flex: 1, padding: '7px 9px', borderRadius: 7,
+            background: 'rgba(24,24,27,.04)',
+            display: 'flex', flexDirection: 'column', gap: 2 }}>
+            <div className="mono" style={{ fontSize: 9, color: c.tone, fontWeight: 700,
+              letterSpacing: .8 }}>{c.label}</div>
+            <div style={{ fontSize: 18, fontWeight: 600, lineHeight: 1, letterSpacing: -.4 }}>{c.n}</div>
+          </div>
+        ))}
+      </div>
+
+      {/* NOW — the active alert */}
+      <div style={{ padding: '4px 14px 8px' }}>
+        <div className="mono" style={{ fontSize: 9, color: 'rgba(24,24,27,.45)',
+          letterSpacing: 1.4, marginBottom: 6 }}>NOW</div>
+        <div style={{ borderRadius: 10, border: '1px solid rgba(239,68,68,.25)',
+          background: 'linear-gradient(180deg, rgba(254,242,242,.55) 0%, #fff 65%)',
+          padding: '11px 13px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <span style={{ width: 22, height: 22, borderRadius: 5, flexShrink: 0,
+              background: '#ef4444', color: '#fff',
+              display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}>
+              <svg width="12" height="12" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M7 1.5L.8 12.5h12.4L7 1.5z"/><path d="M7 5.5v3.2M7 10.3v.01"/>
+              </svg>
+            </span>
+            <span className="mono" style={{ fontSize: 10, color: 'rgba(24,24,27,.55)',
+              letterSpacing: .4 }}>
+              {active.flag} {active.robot} · rm {active.room} · {active.city}
+            </span>
+            <span style={{ flex: 1 }}/>
+            <span className="mono" style={{ fontSize: 9.5, color: '#b91c1c', fontWeight: 700,
+              letterSpacing: .6 }}>STALLED {active.stalled}</span>
+          </div>
+          <div style={{ fontSize: 13, fontWeight: 600, marginTop: 7, lineHeight: 1.3,
+            color: '#17171a' }}>
+            {active.issue}
+          </div>
+          <div style={{ fontSize: 11.5, color: 'rgba(24,24,27,.6)', marginTop: 4, lineHeight: 1.45 }}>
+            I tried the lever twice — no movement. {active.why}
+          </div>
+
+          {/* Why? expansion (LLM reply) */}
+          {reply && (
+            <div style={{ marginTop: 9, padding: '8px 10px', borderRadius: 6,
+              background: 'rgba(24,24,27,.04)', border: '1px solid rgba(24,24,27,.06)',
+              fontSize: 11.5, lineHeight: 1.45, color: '#17171a' }}>
+              {reply}
+            </div>
+          )}
+          {thinking && !reply && (
+            <div style={{ marginTop: 9, padding: '8px 10px', borderRadius: 6,
+              background: 'rgba(24,24,27,.04)', fontSize: 11, color: 'rgba(24,24,27,.55)' }}>
+              Billie Boss is checking the logs…
+            </div>
+          )}
+
+          <div style={{ display: 'flex', gap: 5, marginTop: 9 }}>
+            <button onClick={() => goto && goto('operator')}
+              style={{ all: 'unset', cursor: 'pointer', flex: 1,
+                padding: '7px 10px', borderRadius: 6, background: '#17171a', color: '#fff',
+                fontSize: 11.5, fontWeight: 600, textAlign: 'center' }}>
+              Take over →
+            </button>
+            <button onClick={askWhy} disabled={thinking || !!reply}
+              style={{ all: 'unset', cursor: thinking || reply ? 'default' : 'pointer',
+                padding: '7px 10px', borderRadius: 6,
+                border: '1px solid rgba(24,24,27,.1)', background: '#fff',
+                fontSize: 11.5, fontWeight: 500,
+                color: reply ? 'rgba(24,24,27,.4)' : '#17171a',
+                opacity: thinking ? .6 : 1 }}>
+              Why?
+            </button>
+            <button onClick={() => setAcked && setAcked(true)}
+              style={{ all: 'unset', cursor: 'pointer',
+                padding: '7px 10px', borderRadius: 6,
+                border: '1px solid rgba(24,24,27,.1)', background: '#fff',
+                fontSize: 11.5, fontWeight: 500, color: '#17171a' }}>
+              Skip
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* QUEUE — grouped by severity */}
+      <div style={{ padding: '6px 0 16px' }}>
+        {groups.map(g => g.items.length > 0 && (
+          <div key={g.sev} style={{ marginBottom: 8 }}>
+            <div className="mono" style={{ fontSize: 9, letterSpacing: 1.4,
+              color: TRIAGE_SEV[g.sev].tone, fontWeight: 700,
+              padding: '8px 14px 4px', display: 'flex', alignItems: 'center', gap: 6 }}>
+              {g.label}
+              <span style={{ color: 'rgba(24,24,27,.4)', fontWeight: 500 }}>· {g.items.length}</span>
+            </div>
+            {g.items.map(a => {
+              const s = TRIAGE_SEV[a.sev];
+              return (
+                <div key={a.id}
+                  onClick={() => goto && goto('alerts')}
+                  style={{ padding: '8px 14px',
+                    borderTop: '1px solid rgba(24,24,27,.04)',
+                    display: 'flex', alignItems: 'center', gap: 9, cursor: 'pointer' }}>
+                  <span style={{ width: 6, height: 6, borderRadius: 4, background: s.tone, flexShrink: 0 }}/>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontSize: 12, fontWeight: 500, lineHeight: 1.3,
+                      color: '#17171a',
+                      whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                      {a.issue}
+                    </div>
+                    <div className="mono" style={{ fontSize: 9.5, color: 'rgba(24,24,27,.45)',
+                      letterSpacing: .3, marginTop: 1 }}>
+                      {a.flag} {a.robot.replace('BILLIE-', 'B-')} · rm {a.room}
+                    </div>
+                  </div>
+                  <button onClick={(e) => { e.stopPropagation(); }}
+                    style={{ all: 'unset', cursor: 'pointer',
+                      padding: '4px 8px', borderRadius: 5, fontSize: 10.5, fontWeight: 600,
+                      background: 'rgba(24,24,27,.05)', color: 'rgba(24,24,27,.65)' }}>
+                    Ack
+                  </button>
+                  <button onClick={(e) => { e.stopPropagation(); }}
+                    style={{ all: 'unset', cursor: 'pointer',
+                      padding: '4px 8px', borderRadius: 5, fontSize: 10.5, fontWeight: 600,
+                      background: 'rgba(24,24,27,.05)', color: 'rgba(24,24,27,.65)' }}>
+                    Snooze
+                  </button>
+                </div>
+              );
+            })}
+          </div>
+        ))}
+      </div>
+
+      {/* footer link */}
+      <div style={{ padding: '0 14px 14px', marginTop: 'auto' }}>
+        <button onClick={() => goto && goto('alerts')}
+          style={{ all: 'unset', cursor: 'pointer',
+            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
+            width: '100%', padding: '8px 10px', borderRadius: 6,
+            background: 'rgba(24,24,27,.04)', fontSize: 11.5, fontWeight: 600,
+            color: '#17171a' }}>
+          Open all alerts
+          <span className="mono" style={{ fontSize: 10, opacity: .5 }}>→</span>
+        </button>
+      </div>
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════
+// DispatcherMini — compact queue of unassigned/pending tasks for the
+// agent panel on Live View. Tap a row to assign or open in operator.
+// ═══════════════════════════════════════════════════════════════
+function DispatcherMini({ goto }) {
+  const QUEUE = [
+    { id: 'T-4821', flag: '🇮🇹', hotel: 'Marriott Rome',     room: '1402', task: 'Towels + toothbrush',     wait: '4m',  prio: 'high',   billie: null },
+    { id: 'T-4820', flag: '🇮🇹', hotel: 'Marriott Rome',     room: '0908', task: 'Late checkout pickup',    wait: '6m',  prio: 'med',    billie: null },
+    { id: 'T-4819', flag: '🇫🇷', hotel: 'Le Meurice Paris',   room: '0612', task: 'Extra pillows',           wait: '2m',  prio: 'med',    billie: 'Billie-22' },
+    { id: 'T-4818', flag: '🇮🇹', hotel: 'Marriott Rome',     room: '1108', task: 'Room service · breakfast',wait: '11m', prio: 'high',   billie: null },
+    { id: 'T-4817', flag: '🇫🇷', hotel: 'Le Meurice Paris',   room: '0204', task: 'Trash pickup',            wait: '1m',  prio: 'low',    billie: 'Billie-19' },
+    { id: 'T-4816', flag: '🇮🇹', hotel: 'Marriott Rome',     room: '0716', task: 'Iron + ironing board',    wait: '3m',  prio: 'low',    billie: null },
+    { id: 'T-4815', flag: '🇫🇷', hotel: 'Le Meurice Paris',   room: '0801', task: 'Welcome amenity drop',   wait: '7m',  prio: 'med',    billie: null },
+  ];
+  const PRIO = {
+    high: { tone: '#ef4444', bg: 'rgba(239,68,68,.1)' },
+    med:  { tone: '#f59e0b', bg: 'rgba(245,158,11,.12)' },
+    low:  { tone: 'rgba(24,24,27,.45)', bg: 'rgba(24,24,27,.06)' },
+  };
+  const unassigned = QUEUE.filter(t => !t.billie).length;
+  return (
+    <div style={{ flex: 1, minHeight: 0, overflow: 'auto', padding: '10px 12px 18px' }}>
+      {/* header strip */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '4px 2px 8px' }}>
+        <span className="mono" style={{ fontSize: 9, color: 'rgba(24,24,27,.45)', letterSpacing: 1.2 }}>
+          QUEUE · {QUEUE.length}
+        </span>
+        <span style={{ flex: 1 }}/>
+        <span className="mono" style={{ fontSize: 9, color: '#b45309', letterSpacing: .8,
+          padding: '1px 5px', borderRadius: 3, background: 'rgba(245,158,11,.14)', fontWeight: 700 }}>
+          {unassigned} UNASSIGNED
+        </span>
+      </div>
+
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
+        {QUEUE.map(t => {
+          const p = PRIO[t.prio];
+          return (
+            <button key={t.id} onClick={() => goto && goto('dispatcher')}
+              style={{ all: 'unset', cursor: 'pointer',
+                display: 'flex', alignItems: 'flex-start', gap: 9,
+                padding: '9px 10px', borderRadius: 7,
+                border: '1px solid rgba(24,24,27,.06)', background: '#fff' }}>
+              <span style={{ width: 4, alignSelf: 'stretch', borderRadius: 2,
+                background: p.tone, flexShrink: 0, marginTop: 1 }}/>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                  <span style={{ fontSize: 11.5 }}>{t.flag}</span>
+                  <span className="mono" style={{ fontSize: 10, color: 'rgba(24,24,27,.55)',
+                    letterSpacing: .4 }}>rm {t.room}</span>
+                  <span style={{ flex: 1 }}/>
+                  <span className="mono" style={{ fontSize: 9.5, color: 'rgba(24,24,27,.4)',
+                    letterSpacing: .3 }}>{t.wait}</span>
+                </div>
+                <div style={{ fontSize: 12.5, fontWeight: 500, color: '#17171a',
+                  marginTop: 2, lineHeight: 1.3, whiteSpace: 'nowrap',
+                  overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                  {t.task}
+                </div>
+                <div className="mono" style={{ fontSize: 9.5,
+                  color: t.billie ? 'rgba(24,24,27,.55)' : '#b45309',
+                  letterSpacing: .3, marginTop: 3,
+                  display: 'flex', alignItems: 'center', gap: 5 }}>
+                  {t.billie ? (
+                    <><span style={{ width: 5, height: 5, borderRadius: 3, background: '#22c55e' }}/>{t.billie}</>
+                  ) : (
+                    <>UNASSIGNED · tap to assign</>
+                  )}
+                </div>
+              </div>
+            </button>
+          );
+        })}
+      </div>
+
+      {/* open full dispatcher */}
+      <button onClick={() => goto && goto('dispatcher')}
+        style={{ all: 'unset', cursor: 'pointer',
+          display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
+          width: '100%', marginTop: 10, padding: '8px 10px', borderRadius: 6,
+          background: 'rgba(24,24,27,.04)', fontSize: 11.5, fontWeight: 600,
+          color: '#17171a' }}>
+        Open full dispatcher
+        <span className="mono" style={{ fontSize: 10, opacity: .5 }}>→</span>
+      </button>
+    </div>
   );
 }
 
@@ -3867,6 +4489,288 @@ function AnalyticsComingSoon() {
   );
 }
 
+// ═══════════════════════════════════════════════════════════════
+// Analytics · Yesterday — Nov 13 fleet recap
+// Editorial: headline number, short lede, then property + robot tables.
+// Zero live data — all static, so it reads cleanly at the 9am stand-up.
+// ═══════════════════════════════════════════════════════════════
+function AnalyticsYesterday() {
+  const total   = 742;   // rooms cleaned
+  const target  = 720;
+  const auton   = 93.1;  // % autonomous (no tele-op)
+  const avgCyc  = 20.8;  // min / room
+  const flags   = 4;     // guest-facing issues
+
+  const PROPS = [
+    { site: 'ROOMers Milan',     flag: '🇮🇹', rooms: 164, tgt: 156, auto: 95.4, flags: 0, lead: 'Marta R.'   },
+    { site: 'Nobu Berlin',       flag: '🇩🇪', rooms: 138, tgt: 140, auto: 91.2, flags: 1, lead: 'Jonas W.'   },
+    { site: 'Sofitel Paris',     flag: '🇫🇷', rooms: 122, tgt: 118, auto: 92.8, flags: 1, lead: 'Camille D.' },
+    { site: 'The Standard LDN',  flag: '🇬🇧', rooms: 108, tgt: 110, auto: 94.1, flags: 0, lead: 'Priya K.'   },
+    { site: '1 Hotel Brooklyn',  flag: '🇺🇸', rooms:  96, tgt:  96, auto: 88.7, flags: 2, lead: 'Devon M.'   },
+    { site: 'Park Hyatt Tokyo',  flag: '🇯🇵', rooms:  68, tgt:  70, auto: 96.5, flags: 0, lead: 'Akiko T.'   },
+    { site: 'Cardo Brussels',    flag: '🇧🇪', rooms:  46, tgt:  30, auto: 90.0, flags: 0, lead: 'Hugo V.'    },
+  ];
+  const ROBOTS = [
+    { id: 'BILLIE-08', site: 'Milan',     rooms: 58, cyc: 19.4, auto: 97.2, tele: 2, trend: 'up'   },
+    { id: 'BILLIE-12', site: 'Milan',     rooms: 54, cyc: 20.8, auto: 95.1, tele: 4, trend: 'flat' },
+    { id: 'BILLIE-03', site: 'Berlin',    rooms: 47, cyc: 22.1, auto: 92.4, tele: 6, trend: 'flat' },
+    { id: 'BILLIE-09', site: 'London',    rooms: 46, cyc: 21.3, auto: 94.1, tele: 3, trend: 'up'   },
+    { id: 'BILLIE-05', site: 'Paris',     rooms: 42, cyc: 23.7, auto: 89.6, tele: 7, trend: 'down' },
+    { id: 'BILLIE-17', site: 'Tokyo',     rooms: 38, cyc: 20.1, auto: 96.5, tele: 2, trend: 'up'   },
+    { id: 'BILLIE-14', site: 'Brooklyn',  rooms: 31, cyc: 26.3, auto: 82.1, tele: 14, trend: 'down' },
+    { id: 'BILLIE-21', site: 'Madrid',    rooms: 28, cyc: 27.9, auto: 78.4, tele: 18, trend: 'down' },
+  ];
+  const FLAGS = [
+    { time: '14:22', site: 'Berlin',   robot: 'BILLIE-03', room: '412',
+      note: 'Stained bedsheet missed — guest escalated at check-in.' },
+    { time: '16:40', site: 'Paris',    robot: 'BILLIE-05', room: '208',
+      note: 'Bathroom mirror streaks flagged by inspector; rework 4min.' },
+    { time: '18:05', site: 'Brooklyn', robot: 'BILLIE-14', room: '503',
+      note: 'Towel count short by 1 — housekeeper added on manual pass.' },
+    { time: '21:17', site: 'Brooklyn', robot: 'BILLIE-14', room: '611',
+      note: 'Vacuum missed under-bed strip. Pattern — BILLIE-14 cal drift.' },
+  ];
+
+  // mini bar — 24 hourly rooms for the hero
+  const HOURLY = [2, 1, 0, 0, 0, 3, 14, 38, 62, 71, 64, 58, 52, 55, 60, 66, 58, 49, 41, 33, 28, 19, 11, 5];
+  const maxH = Math.max(...HOURLY);
+
+  return (
+    <div style={{ padding: '28px 40px 48px', display: 'flex', flexDirection: 'column', gap: 24 }}>
+
+      {/* hero — headline number + lede + hourly bars */}
+      <div style={{ display: 'grid', gridTemplateColumns: '1.1fr 1fr', gap: 28,
+        paddingBottom: 24, borderBottom: '1px solid rgba(24,24,27,.08)' }}>
+        <div>
+          <div className="mono" style={{ fontSize: 10, letterSpacing: 1.5,
+            color: 'rgba(24,24,27,.4)', marginBottom: 12 }}>
+            THURSDAY, NOV 13 · FLEET RECAP
+          </div>
+          <div style={{ display: 'flex', alignItems: 'baseline', gap: 14, marginBottom: 10 }}>
+            <div style={{ fontSize: 68, fontWeight: 600, letterSpacing: -2,
+              color: '#17171a', lineHeight: 1, fontFamily: '"Helvetica Neue", Helvetica, Arial, sans-serif' }}>
+              {total}
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+              <div style={{ fontSize: 14, fontWeight: 500, color: '#17171a' }}>
+                rooms cleaned
+              </div>
+              <div style={{ fontSize: 12, color: 'rgba(24,24,27,.52)' }}>
+                <span style={{ color: '#15803d', fontWeight: 600 }}>+{total - target}</span>
+                {' '}vs. target of {target}
+              </div>
+            </div>
+          </div>
+          <div style={{ fontSize: 14, lineHeight: 1.6, color: 'rgba(24,24,27,.72)',
+            maxWidth: 520, textWrap: 'pretty' }}>
+            A clean day. Milan ran hot — ROOMers pulled ahead of target by
+            noon and stayed there. Brooklyn held the fleet back: BILLIE-14
+            looks due for calibration. Two guest flags, both recoverable.
+          </div>
+        </div>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
+            <div className="mono" style={{ fontSize: 9.5, letterSpacing: 1.3,
+              color: 'rgba(24,24,27,.4)' }}>ROOMS / HOUR · LOCAL TIME</div>
+            <div style={{ fontSize: 11, color: 'rgba(24,24,27,.48)' }}>
+              peak 09:00 · {Math.max(...HOURLY)} rooms
+            </div>
+          </div>
+          <div style={{ display: 'flex', alignItems: 'flex-end', gap: 3, height: 120,
+            padding: '0 2px', borderBottom: '1px solid rgba(24,24,27,.1)' }}>
+            {HOURLY.map((v, i) => (
+              <div key={i} style={{ flex: 1, display: 'flex', flexDirection: 'column',
+                justifyContent: 'flex-end', height: '100%' }}>
+                <div style={{ height: (v / maxH) * 100 + '%',
+                  background: i >= 8 && i <= 10 ? '#17171a' : 'rgba(24,24,27,.2)',
+                  borderRadius: 1 }}/>
+              </div>
+            ))}
+          </div>
+          <div className="mono" style={{ display: 'flex', justifyContent: 'space-between',
+            fontSize: 9.5, color: 'rgba(24,24,27,.4)', letterSpacing: .5 }}>
+            <span>00</span><span>06</span><span>12</span><span>18</span><span>23</span>
+          </div>
+        </div>
+      </div>
+
+      {/* KPI row */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 1,
+        background: 'rgba(24,24,27,.08)',
+        border: '1px solid rgba(24,24,27,.08)', borderRadius: 10, overflow: 'hidden' }}>
+        <AYKpi label="Autonomy rate" val={auton.toFixed(1)} unit="%" sub="no tele-op" delta="+0.8 vs wk" deltaTone="ok"/>
+        <AYKpi label="Avg cycle time" val={avgCyc.toFixed(1)} unit="min" sub="per room" delta="−0.4 vs wk" deltaTone="ok"/>
+        <AYKpi label="Guest-facing flags" val={flags} unit="" sub="out of 742" delta="+1 vs wk" deltaTone="warn"/>
+        <AYKpi label="Properties on target" val="5" unit="/ 7" sub="Berlin, London short" delta="" deltaTone=""/>
+      </div>
+
+      {/* two-column: properties + robots */}
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20 }}>
+
+        {/* properties */}
+        <AYPanel title="By property" sub="rooms · target · autonomy">
+          <div style={{ display: 'flex', flexDirection: 'column' }}>
+            <div className="mono" style={{ display: 'grid',
+              gridTemplateColumns: '1.6fr 60px 56px 80px 50px',
+              gap: 10, padding: '6px 14px 10px', fontSize: 9.5, letterSpacing: 1.1,
+              color: 'rgba(24,24,27,.42)', borderBottom: '1px solid rgba(24,24,27,.06)' }}>
+              <span>PROPERTY</span>
+              <span style={{ textAlign: 'right' }}>ROOMS</span>
+              <span style={{ textAlign: 'right' }}>VS TGT</span>
+              <span style={{ textAlign: 'right' }}>AUTONOMY</span>
+              <span style={{ textAlign: 'right' }}>FLAGS</span>
+            </div>
+            {PROPS.map((p, i) => {
+              const d = p.rooms - p.tgt;
+              const dTone = d >= 0 ? '#15803d' : '#b45309';
+              return (
+                <div key={p.site} style={{ display: 'grid',
+                  gridTemplateColumns: '1.6fr 60px 56px 80px 50px',
+                  gap: 10, padding: '12px 14px', fontSize: 13,
+                  borderBottom: i < PROPS.length - 1 ? '1px solid rgba(24,24,27,.04)' : 'none',
+                  alignItems: 'center' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 10, minWidth: 0 }}>
+                    <span style={{ fontSize: 16 }}>{p.flag}</span>
+                    <div style={{ minWidth: 0 }}>
+                      <div style={{ fontWeight: 500, color: '#17171a',
+                        overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{p.site}</div>
+                      <div style={{ fontSize: 11, color: 'rgba(24,24,27,.48)' }}>{p.lead}</div>
+                    </div>
+                  </div>
+                  <div className="mono" style={{ textAlign: 'right', color: '#17171a', fontWeight: 500 }}>
+                    {p.rooms}
+                  </div>
+                  <div className="mono" style={{ textAlign: 'right', color: dTone, fontWeight: 500 }}>
+                    {d >= 0 ? '+' : ''}{d}
+                  </div>
+                  <AYBar value={p.auto}/>
+                  <div className="mono" style={{ textAlign: 'right',
+                    color: p.flags ? '#b45309' : 'rgba(24,24,27,.35)', fontWeight: p.flags ? 600 : 400 }}>
+                    {p.flags || '—'}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </AYPanel>
+
+        {/* robots */}
+        <AYPanel title="By robot" sub="rooms · cycle · autonomy">
+          <div style={{ display: 'flex', flexDirection: 'column' }}>
+            <div className="mono" style={{ display: 'grid',
+              gridTemplateColumns: '1.5fr 60px 60px 80px 44px',
+              gap: 10, padding: '6px 14px 10px', fontSize: 9.5, letterSpacing: 1.1,
+              color: 'rgba(24,24,27,.42)', borderBottom: '1px solid rgba(24,24,27,.06)' }}>
+              <span>ROBOT</span>
+              <span style={{ textAlign: 'right' }}>ROOMS</span>
+              <span style={{ textAlign: 'right' }}>CYCLE</span>
+              <span style={{ textAlign: 'right' }}>AUTONOMY</span>
+              <span style={{ textAlign: 'right' }}>TREND</span>
+            </div>
+            {ROBOTS.map((r, i) => {
+              const arrow = r.trend === 'up' ? '↗' : r.trend === 'down' ? '↘' : '→';
+              const tcol = r.trend === 'up' ? '#15803d' : r.trend === 'down' ? '#b45309' : 'rgba(24,24,27,.35)';
+              return (
+                <div key={r.id} style={{ display: 'grid',
+                  gridTemplateColumns: '1.5fr 60px 60px 80px 44px',
+                  gap: 10, padding: '12px 14px', fontSize: 13,
+                  borderBottom: i < ROBOTS.length - 1 ? '1px solid rgba(24,24,27,.04)' : 'none',
+                  alignItems: 'center' }}>
+                  <div style={{ minWidth: 0 }}>
+                    <div className="mono" style={{ fontWeight: 500, color: '#17171a', fontSize: 12 }}>{r.id}</div>
+                    <div style={{ fontSize: 11, color: 'rgba(24,24,27,.48)' }}>{r.site}</div>
+                  </div>
+                  <div className="mono" style={{ textAlign: 'right', color: '#17171a', fontWeight: 500 }}>{r.rooms}</div>
+                  <div className="mono" style={{ textAlign: 'right', color: '#17171a' }}>
+                    {r.cyc.toFixed(1)}<span style={{ color: 'rgba(24,24,27,.4)', fontWeight: 400 }}> m</span>
+                  </div>
+                  <AYBar value={r.auto}/>
+                  <div className="mono" style={{ textAlign: 'right', color: tcol, fontSize: 14 }}>{arrow}</div>
+                </div>
+              );
+            })}
+          </div>
+        </AYPanel>
+      </div>
+
+      {/* flags detail */}
+      <AYPanel title="Guest-facing flags" sub="4 incidents · all recoverable">
+        <div style={{ display: 'flex', flexDirection: 'column' }}>
+          {FLAGS.map((f, i) => (
+            <div key={i} style={{ display: 'grid',
+              gridTemplateColumns: '60px 110px 110px 70px 1fr',
+              gap: 16, padding: '14px 14px', alignItems: 'center',
+              borderBottom: i < FLAGS.length - 1 ? '1px solid rgba(24,24,27,.04)' : 'none' }}>
+              <div className="mono" style={{ fontSize: 11, color: 'rgba(24,24,27,.52)' }}>{f.time}</div>
+              <div style={{ fontSize: 12.5, color: '#17171a', fontWeight: 500 }}>{f.site}</div>
+              <div className="mono" style={{ fontSize: 11.5, color: '#17171a' }}>{f.robot}</div>
+              <div className="mono" style={{ fontSize: 11.5, color: 'rgba(24,24,27,.6)' }}>RM {f.room}</div>
+              <div style={{ fontSize: 13, color: 'rgba(24,24,27,.72)', lineHeight: 1.5 }}>{f.note}</div>
+            </div>
+          ))}
+        </div>
+      </AYPanel>
+    </div>
+  );
+}
+
+// ─── sub-atoms ─────────────────────────────────────────────────
+function AYKpi({ label, val, unit, sub, delta, deltaTone }) {
+  const dc = deltaTone === 'ok' ? '#15803d' : deltaTone === 'warn' ? '#b45309' : 'rgba(24,24,27,.4)';
+  return (
+    <div style={{ background: '#fff', padding: '18px 20px 20px',
+      display: 'flex', flexDirection: 'column', gap: 6 }}>
+      <div className="mono" style={{ fontSize: 9.5, letterSpacing: 1.2,
+        color: 'rgba(24,24,27,.42)' }}>{label.toUpperCase()}</div>
+      <div style={{ display: 'flex', alignItems: 'baseline', gap: 5 }}>
+        <div style={{ fontSize: 32, fontWeight: 600, letterSpacing: -.8, color: '#17171a',
+          fontFamily: '"Helvetica Neue", Helvetica, Arial, sans-serif', lineHeight: 1 }}>
+          {val}
+        </div>
+        {unit && <div style={{ fontSize: 14, color: 'rgba(24,24,27,.52)', fontWeight: 500 }}>{unit}</div>}
+      </div>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginTop: 2 }}>
+        <div style={{ fontSize: 11.5, color: 'rgba(24,24,27,.52)' }}>{sub}</div>
+        {delta && <div className="mono" style={{ fontSize: 10.5, color: dc, fontWeight: 500 }}>{delta}</div>}
+      </div>
+    </div>
+  );
+}
+
+function AYPanel({ title, sub, children }) {
+  return (
+    <div style={{ background: '#fff', border: '1px solid rgba(24,24,27,.08)',
+      borderRadius: 10, overflow: 'hidden' }}>
+      <div style={{ padding: '14px 16px 12px',
+        borderBottom: '1px solid rgba(24,24,27,.06)',
+        display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 10 }}>
+        <div style={{ fontSize: 13.5, fontWeight: 600, color: '#17171a', letterSpacing: -.1 }}>{title}</div>
+        <div className="mono" style={{ fontSize: 10, letterSpacing: 1.2,
+          color: 'rgba(24,24,27,.4)' }}>{sub?.toUpperCase()}</div>
+      </div>
+      {children}
+    </div>
+  );
+}
+
+function AYBar({ value }) {
+  // 70-100 range mapped
+  const pct = Math.max(0, Math.min(1, (value - 70) / 30));
+  const tone = value >= 90 ? '#17171a' : value >= 85 ? 'rgba(24,24,27,.55)' : '#b45309';
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+      <div style={{ flex: 1, height: 4, background: 'rgba(24,24,27,.06)', borderRadius: 2 }}>
+        <div style={{ width: pct * 100 + '%', height: '100%', background: tone, borderRadius: 2 }}/>
+      </div>
+      <div className="mono" style={{ fontSize: 11, color: '#17171a', fontWeight: 500, width: 30, textAlign: 'right' }}>
+        {value.toFixed(0)}
+      </div>
+    </div>
+  );
+}
+
+
+
 function AppPlaceholder({ tab }) {
   return (
     <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center',
@@ -4098,52 +5002,18 @@ function HomeView({ goto }) {
           </div>
         </div>
 
-        {/* KPI row */}
-        <div style={{ padding: '20px 40px 8px',
-          display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 14 }}>
-          <KpiCard label="ROOMS TODAY" value="14" suffix="/ 42" delta="+3 vs yesterday" deltaTone="up" ring={14/42}
-            status={roomsStatus.label} statusTone={roomsStatus.tone}/>
-          <KpiCard label="TELE-OP COVERAGE" value="LIVE"
-            custom={
-              <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 2 }}>
-                <div style={{ width: 34, height: 34, borderRadius: 17,
-                  background: 'linear-gradient(135deg, #fde68a, #fb923c)',
-                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  color: '#78350f', fontWeight: 700, fontSize: 13, letterSpacing: .3, flexShrink: 0,
-                  boxShadow: '0 0 0 2px #fff, 0 0 0 3px rgba(251,146,60,.4)' }}>OP</div>
-                <div style={{ display: 'flex', flexDirection: 'column', lineHeight: 1.2, minWidth: 0 }}>
-                  <span style={{ fontSize: 15, fontWeight: 600, color: '#111',
-                    whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>Oded Polak</span>
-                  <span className="mono" style={{ fontSize: 10, color: 'rgba(0,0,0,.55)', letterSpacing: .4 }}>
-                    on shift · 4h 12m
-                  </span>
-                </div>
-                <span style={{ flex: 1 }}/>
-                <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5,
-                  padding: '3px 8px', borderRadius: 10, background: 'rgba(34,197,94,.12)',
-                  fontSize: 10, fontWeight: 700, color: '#15803d', letterSpacing: .3 }}>
-                  <span style={{ width: 6, height: 6, borderRadius: 3, background: '#22c55e',
-                    boxShadow: '0 0 6px #22c55e' }}/>
-                  LIVE
-                </span>
-              </div>
-            }
-            delta="2 operators online" deltaTone="up"/>
-          <KpiCard label="OPEN INCIDENTS" value="3" delta="1 new · 2 assigned" deltaTone="down" tone="#ef4444"/>
-        </div>
-
-        {/* two-up: Today at a glance + Billies */}
-        <div style={{ padding: '14px 40px 0',
-          display: 'grid', gridTemplateColumns: '1.2fr 1fr', gap: 14 }}>
-          {/* Today at a glance */}
+        {/* STRIP 1 — Today: rooms per site + total + active Billies + ops on shift */}
+        <div style={{ padding: '20px 40px 0' }}>
           <div style={{ background: '#fff', border: '1px solid rgba(0,0,0,.08)',
             boxShadow: '0 1px 0 rgba(0,0,0,.04), 0 8px 24px -12px rgba(0,0,0,.35)',
-            borderRadius: 10, padding: '16px 18px 18px', display: 'flex', flexDirection: 'column', minHeight: 0 }}>
+            borderRadius: 10, padding: '16px 18px 18px' }}>
             <div style={{ display: 'flex', alignItems: 'baseline', gap: 10, marginBottom: 12 }}>
               <h3 style={{ margin: 0, fontSize: 16, fontWeight: 600, color: '#111',
-                fontFamily: '"Helvetica Neue", Helvetica, Arial, sans-serif', letterSpacing: -.4 }}>Today at a glance</h3>
+                fontFamily: '"Helvetica Neue", Helvetica, Arial, sans-serif', letterSpacing: -.4 }}>
+                Today
+              </h3>
               <span className="mono" style={{ fontSize: 9.5, color: 'rgba(0,0,0,.45)', letterSpacing: 1.2 }}>
-                ACROSS ALL 4 SITES
+                ROOMS · BILLIES · OPERATORS
               </span>
               <span style={{ flex: 1 }}/>
               <a onClick={() => goto('dispatcher')}
@@ -4151,68 +5021,41 @@ function HomeView({ goto }) {
                 Open Dispatcher →
               </a>
             </div>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
-              {SITES.map(s => <SiteCard key={s.name} {...s}/>)}
-            </div>
+            <TodayStrip sites={SITES} status={roomsStatus} goto={goto}/>
           </div>
+        </div>
 
-          {/* Billies */}
+        {/* STRIP 2 — Open alerts (each card = photo + alert) */}
+        <div style={{ padding: '14px 40px 0' }}>
           <div style={{ background: '#fff', border: '1px solid rgba(0,0,0,.08)',
             boxShadow: '0 1px 0 rgba(0,0,0,.04), 0 8px 24px -12px rgba(0,0,0,.35)',
-            borderRadius: 10, padding: '16px 18px', display: 'flex', flexDirection: 'column' }}>
-            <div style={{ display: 'flex', alignItems: 'baseline', gap: 10, marginBottom: 10 }}>
+            borderRadius: 10, padding: '16px 18px 16px' }}>
+            <div style={{ display: 'flex', alignItems: 'baseline', gap: 10, marginBottom: 12 }}>
               <h3 style={{ margin: 0, fontSize: 16, fontWeight: 600, color: '#111',
                 fontFamily: '"Helvetica Neue", Helvetica, Arial, sans-serif', letterSpacing: -.4 }}>
-                Billies <span style={{ color: 'rgba(0,0,0,.45)', fontWeight: 700 }}>· {DISPATCHER_BILLIES.length} total</span>
+                Open alerts
               </h3>
-              <span style={{ flex: 1 }}/>
-              <span className="mono" style={{ fontSize: 10, color: 'rgba(0,0,0,.55)', letterSpacing: .6 }}>
-                {DISPATCHER_BILLIES.filter(b => b.state === 'working').length} WORKING · {DISPATCHER_BILLIES.filter(b => b.state === 'idle').length} IDLE · {DISPATCHER_BILLIES.filter(b => b.state === 'offline').length} OFFLINE
-              </span>
-            </div>
-            <div style={{ display: 'flex', flexDirection: 'column' }}>
-              {DISPATCHER_BILLIES.slice(0, 5).map((b, i) => <HomeBillieRow key={b.id} b={b} last={i === 4}/>)}
-            </div>
-            <div style={{ marginTop: 10, paddingTop: 10, borderTop: '1px solid rgba(0,0,0,.06)',
-              display: 'flex', alignItems: 'center', gap: 8 }}>
-              <a onClick={() => goto('fleet')}
-                style={{ fontSize: 11, color: '#5b5bf7', cursor: 'pointer', fontWeight: 500 }}>
-                Open Fleet View →
-              </a>
-              <span style={{ flex: 1 }}/>
-              <span style={{ fontSize: 10.5, color: 'rgba(0,0,0,.4)' }}>
-                BILLIE-14 charging · BILLIE-17 in service bay
-              </span>
-            </div>
-          </div>
-        </div>
-
-        {/* Live inspection flags strip (Billie-08) */}
-        <div style={{ padding: '14px 40px 0' }}>
-          <LiveInspectionStrip goto={goto}/>
-        </div>
-
-        {/* Alerts table */}
-        <div style={{ padding: '14px 40px 0' }}>
-          <div style={{ background: '#fff', border: '1px solid rgba(0,0,0,.08)',
-            boxShadow: '0 1px 0 rgba(0,0,0,.04), 0 8px 24px -12px rgba(0,0,0,.35)',
-            borderRadius: 10, padding: '16px 18px 14px' }}>
-            <div style={{ display: 'flex', alignItems: 'baseline', gap: 10, marginBottom: 10 }}>
-              <h3 style={{ margin: 0, fontSize: 16, fontWeight: 600, color: '#111',
-                fontFamily: '"Helvetica Neue", Helvetica, Arial, sans-serif', letterSpacing: -.4 }}>Alerts</h3>
               <span className="mono" style={{ fontSize: 9.5, color: 'rgba(0,0,0,.45)', letterSpacing: 1.2 }}>
-                3 OPEN · 1 UNASSIGNED
+                3 OPEN · 1 UNASSIGNED · LIVE FROM FLEET
               </span>
               <span style={{ flex: 1 }}/>
-              <a style={{ fontSize: 11, color: '#5b5bf7', cursor: 'pointer', fontWeight: 500 }}>
-                View all →
+              <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5,
+                padding: '3px 8px', borderRadius: 10, background: 'rgba(239,68,68,.1)',
+                fontSize: 10, fontWeight: 700, color: '#b91c1c', letterSpacing: .3, marginRight: 12 }}>
+                <span style={{ width: 6, height: 6, borderRadius: 3, background: '#ef4444',
+                  boxShadow: '0 0 6px #ef4444', animation: 'billPulse 1.4s ease-in-out infinite' }}/>
+                LIVE
+              </span>
+              <a onClick={() => goto('alerts')}
+                style={{ fontSize: 11, color: '#5b5bf7', cursor: 'pointer', fontWeight: 500 }}>
+                All alerts →
               </a>
             </div>
-            <AlertsTable goto={goto}/>
+            <HomeAlertCards goto={goto}/>
           </div>
         </div>
 
-        {/* Task tracking — completed inspections across the fleet */}
+        {/* STRIP 3 — Task tracking */}
         <div style={{ padding: '14px 40px 0' }}>
           <div style={{ background: '#fff', border: '1px solid rgba(0,0,0,.08)',
             boxShadow: '0 1px 0 rgba(0,0,0,.04), 0 8px 24px -12px rgba(0,0,0,.35)',
@@ -4238,7 +5081,7 @@ function HomeView({ goto }) {
           </div>
         </div>
 
-        {/* autonomy chart — today per robot */}
+        {/* STRIP 4 — Autonomy: per-Billie autonomy + avg inspection time */}
         <div style={{ padding: '14px 40px 32px' }}>
           <div style={{ background: '#fff', border: '1px solid rgba(0,0,0,.08)',
             boxShadow: '0 1px 0 rgba(0,0,0,.04), 0 8px 24px -12px rgba(0,0,0,.35)',
@@ -4246,8 +5089,11 @@ function HomeView({ goto }) {
             <div style={{ display: 'flex', alignItems: 'baseline', gap: 10, marginBottom: 4 }}>
               <h3 style={{ margin: 0, fontSize: 16, fontWeight: 600, color: '#111',
                 fontFamily: '"Helvetica Neue", Helvetica, Arial, sans-serif', letterSpacing: -.4 }}>
-                Today's autonomy — per Billie
+                Autonomy level
               </h3>
+              <span className="mono" style={{ fontSize: 9.5, color: 'rgba(0,0,0,.45)', letterSpacing: 1.2 }}>
+                PER BILLIE · TODAY
+              </span>
               <span style={{ flex: 1 }}/>
               <span className="mono" style={{ fontSize: 9.5, color: 'rgba(0,0,0,.45)', letterSpacing: 1.1 }}>
                 TARGET 90%
@@ -4258,14 +5104,10 @@ function HomeView({ goto }) {
               ROOMS FINISHED END-TO-END WITHOUT A TELE-OP TAKE-OVER · COUNT ABOVE EACH BAR
             </div>
             <AutonomyChart data={AUTONOMY} target={TARGET}/>
-          </div>
-        </div>
 
-        {/* Avg inspection time per Billie */}
-        <div style={{ padding: '0 40px 32px' }}>
-          <div style={{ background: '#fff', border: '1px solid rgba(0,0,0,.08)',
-            boxShadow: '0 1px 0 rgba(0,0,0,.04), 0 8px 24px -12px rgba(0,0,0,.35)',
-            borderRadius: 10, padding: '16px 18px 18px' }}>
+            {/* divider */}
+            <div style={{ height: 1, background: 'rgba(0,0,0,.06)', margin: '22px -18px 18px' }}/>
+
             <div style={{ display: 'flex', alignItems: 'baseline', gap: 10, marginBottom: 4 }}>
               <h3 style={{ margin: 0, fontSize: 16, fontWeight: 600, color: '#111',
                 fontFamily: '"Helvetica Neue", Helvetica, Arial, sans-serif', letterSpacing: -.4 }}>
@@ -4493,6 +5335,304 @@ function HomeAction({ label, onClick, tone }) {
   );
 }
 
+// ═══════════════════════════════════════════════════════════════
+// AlertsView — full-page alerts list across the fleet.
+// ═══════════════════════════════════════════════════════════════
+function AlertsView({ goto }) {
+  const [filter, setFilter] = React.useState('open'); // open | acked | resolved | all
+  const [sevFilter, setSevFilter] = React.useState('all');
+
+  const ALERTS = [
+    { id: 'A-2041', flag: '🇮🇹', hotel: 'Marriott Rome',     robot: 'BILLIE-08', room: '1216', kind: 'door',     issue: 'Door won\'t open',                        why: 'Privacy latch likely engaged from inside',     severity: 'high',  started: '08:42', stalled: '1m 32s', assignee: null,             ack: false, status: 'open' },
+    { id: 'A-2040', flag: '🇮🇹', hotel: 'Marriott Rome',     robot: 'BILLIE-14', room: '1118', kind: 'sensor',   issue: 'Depth sensor recalibration required',     why: 'Drift on ToF channel 3 over last 4 inspections', severity: 'high',  started: '08:02', stalled: '14m',    assignee: { name: 'Oded Polak',     init: 'OP', color: '#fb923c' }, ack: true,  status: 'open' },
+    { id: 'A-2039', flag: '🇩🇪', hotel: 'Hilton Berlin',     robot: 'BILLIE-21', room: '0804', kind: 'battery',  issue: 'Battery degradation · 41% capacity',       why: 'Pack at 287 cycles · below maintenance threshold', severity: 'med',  started: '07:18', stalled: '1h 6m',  assignee: { name: 'M. Kim',         init: 'MK', color: '#a855f7' }, ack: true,  status: 'open' },
+    { id: 'A-2038', flag: '🇧🇪', hotel: 'Cardo Brussels',    robot: 'BILLIE-09', room: '0512', kind: 'arm',      issue: 'Arm pose drift on handover',               why: 'Joint 4 encoder skipped 0.3° on last grasp',   severity: 'med',   started: '06:47', stalled: '2h',     assignee: null,             ack: false, status: 'open' },
+    { id: 'A-2037', flag: '🇩🇪', hotel: 'Seminaris Potsdam', robot: 'BILLIE-05', room: '0317', kind: 'wifi',     issue: 'Wi-Fi roam packet loss',                   why: 'AP-3F-04 dropped frames during corridor walk',  severity: 'low',   started: '06:12', stalled: '2h 22m', assignee: { name: 'L. Dubois',      init: 'LD', color: '#10b981' }, ack: true,  status: 'open' },
+    { id: 'A-2036', flag: '🇮🇹', hotel: 'Marriott Rome',     robot: 'BILLIE-12', room: '1210', kind: 'door',     issue: 'Door blocked · luggage in path',           why: 'Operator override · resolved by housekeeping',  severity: 'med',   started: 'yesterday', stalled: '—', assignee: { name: 'Ivy Nakamura',   init: 'IN', color: '#10b981' }, ack: true,  status: 'resolved' },
+    { id: 'A-2035', flag: '🇩🇪', hotel: 'Hilton Berlin',     robot: 'BILLIE-17', room: 'svc',  kind: 'maint',    issue: 'Scheduled drivetrain inspection due',      why: 'Hit 1200km of travel since last service',       severity: 'low',   started: 'yesterday', stalled: '—', assignee: { name: 'P. Jansen',      init: 'PJ', color: '#a78bfa' }, ack: true,  status: 'resolved' },
+  ];
+
+  const KIND_ICON = {
+    door:    <svg width="12" height="12" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="2" width="8" height="11"/><circle cx="9" cy="8" r=".7" fill="currentColor"/></svg>,
+    sensor:  <svg width="12" height="12" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"><circle cx="7" cy="7" r="2"/><path d="M7 1v2M7 11v2M1 7h2M11 7h2M3 3l1.4 1.4M9.6 9.6L11 11M3 11l1.4-1.4M9.6 4.4L11 3"/></svg>,
+    battery: <svg width="12" height="12" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="4" width="9" height="6"/><path d="M11 6v2"/><rect x="3" y="5" width="2.5" height="4" fill="currentColor" stroke="none"/></svg>,
+    arm:     <svg width="12" height="12" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"><path d="M2 12V8l3-3 4 4M9 9l3 3"/><circle cx="5" cy="5" r="1.2"/></svg>,
+    wifi:    <svg width="12" height="12" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"><path d="M2 6.5a8 8 0 0110 0M4 8.5a5 5 0 016 0M7 11h.01"/></svg>,
+    maint:   <svg width="12" height="12" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"><path d="M9.5 2.5a3 3 0 00-3.8 3.8L2 10l2 2 3.7-3.7a3 3 0 003.8-3.8L9.5 6.3 7.7 4.5z"/></svg>,
+  };
+  const SEV = {
+    high: { bg: 'rgba(239,68,68,.12)',  fg: '#b91c1c', dot: '#ef4444', label: 'HIGH' },
+    med:  { bg: 'rgba(245,158,11,.12)', fg: '#b45309', dot: '#f59e0b', label: 'MED'  },
+    low:  { bg: 'rgba(100,116,139,.12)',fg: '#334155', dot: '#94a3b8', label: 'LOW'  },
+  };
+
+  const filtered = ALERTS.filter(a => {
+    if (filter === 'open' && a.status !== 'open') return false;
+    if (filter === 'acked' && (a.status !== 'open' || !a.ack)) return false;
+    if (filter === 'resolved' && a.status !== 'resolved') return false;
+    if (sevFilter !== 'all' && a.severity !== sevFilter) return false;
+    return true;
+  });
+
+  const counts = {
+    open:     ALERTS.filter(a => a.status === 'open').length,
+    unassigned: ALERTS.filter(a => a.status === 'open' && !a.assignee).length,
+    acked:    ALERTS.filter(a => a.status === 'open' && a.ack).length,
+    resolved: ALERTS.filter(a => a.status === 'resolved').length,
+    all:      ALERTS.length,
+  };
+
+  const now = new Date();
+  const clock = String(now.getHours()).padStart(2,'0') + ':' + String(now.getMinutes()).padStart(2,'0');
+
+  return (
+    <div style={{ width: '100%', height: '100%', overflow: 'hidden',
+      background: '#fbfbfa', color: '#17171a', fontFamily: 'Inter, var(--sans)',
+      display: 'flex', flexDirection: 'column' }}>
+      {/* breadcrumb */}
+      <div style={{ padding: '10px 24px', display: 'flex', alignItems: 'center', gap: 12,
+        background: '#ffffff', borderBottom: '1px solid rgba(24,24,27,.05)' }}>
+        <span style={{ fontFamily: '"Helvetica Neue", Helvetica, Arial, sans-serif', fontSize: 15,
+          color: '#17171a' }}>Open Alerts</span>
+        <span style={{ flex: 1 }}/>
+        <span className="mono" style={{ fontSize: 10.5, color: 'rgba(24,24,27,.48)', letterSpacing: .8 }}>
+          Today · {clock}
+        </span>
+      </div>
+
+      <div style={{ flex: 1, minHeight: 0, overflow: 'auto', padding: '22px 40px 40px' }}>
+        {/* title row */}
+        <div style={{ display: 'flex', alignItems: 'flex-start', gap: 24, marginBottom: 22 }}>
+          <div style={{ flex: 1 }}>
+            <h1 style={{ margin: 0, fontSize: 36,
+              fontFamily: '"Helvetica Neue", Helvetica, Arial, sans-serif', fontWeight: 700,
+              letterSpacing: -.6, color: '#17171a' }}>Open Alerts</h1>
+            <div style={{ fontSize: 13, color: 'rgba(24,24,27,.52)', marginTop: 4,
+              fontFamily: '"Helvetica Neue", Helvetica, Arial, sans-serif' }}>
+              Open issues across the fleet · ranked by severity
+            </div>
+          </div>
+          <div style={{ display: 'flex', alignItems: 'flex-start', gap: 22 }}>
+            <AlertStat n={counts.open} label="OPEN" tone="#ef4444"/>
+            <AlertStat n={counts.unassigned} label="UNASSIGNED" tone="#f59e0b"/>
+            <AlertStat n={counts.acked} label="ACKED" tone="#5b5bf7"/>
+          </div>
+        </div>
+
+        {/* filter row */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginBottom: 16, flexWrap: 'wrap' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+            {[
+              { v: 'open', label: 'Open', n: counts.open },
+              { v: 'acked', label: 'Acked', n: counts.acked },
+              { v: 'resolved', label: 'Resolved', n: counts.resolved },
+              { v: 'all', label: 'All', n: counts.all },
+            ].map(f => {
+              const on = filter === f.v;
+              return (
+                <button key={f.v} onClick={() => setFilter(f.v)}
+                  style={{ all: 'unset', cursor: 'pointer',
+                    padding: '6px 12px', borderRadius: 6, fontSize: 12, fontWeight: 600,
+                    color: on ? '#fff' : 'rgba(24,24,27,.7)',
+                    background: on ? '#17171a' : 'transparent',
+                    border: `1px solid ${on ? '#17171a' : 'rgba(24,24,27,.09)'}`,
+                    display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+                  {f.label}
+                  <span className="mono" style={{ fontSize: 10,
+                    color: on ? 'rgba(255,255,255,.55)' : 'rgba(24,24,27,.4)',
+                    fontWeight: 500 }}>{f.n}</span>
+                </button>
+              );
+            })}
+          </div>
+          <span style={{ width: 1, height: 18, background: 'rgba(24,24,27,.1)' }}/>
+          <span className="mono" style={{ fontSize: 9.5, color: 'rgba(24,24,27,.4)',
+            letterSpacing: 1.2 }}>SEVERITY</span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+            {[
+              { v: 'all',  label: 'Any' },
+              { v: 'high', label: 'High', dot: '#ef4444' },
+              { v: 'med',  label: 'Med',  dot: '#f59e0b' },
+              { v: 'low',  label: 'Low',  dot: '#94a3b8' },
+            ].map(f => {
+              const on = sevFilter === f.v;
+              return (
+                <button key={f.v} onClick={() => setSevFilter(f.v)}
+                  style={{ all: 'unset', cursor: 'pointer',
+                    padding: '6px 10px', borderRadius: 6, fontSize: 11.5, fontWeight: 600,
+                    color: on ? '#17171a' : 'rgba(24,24,27,.6)',
+                    background: on ? 'rgba(24,24,27,.06)' : 'transparent',
+                    display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+                  {f.dot && <span style={{ width: 6, height: 6, borderRadius: 3, background: f.dot }}/>}
+                  {f.label}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* alerts list */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 1,
+          background: 'rgba(24,24,27,.06)', borderRadius: 10, overflow: 'hidden',
+          border: '1px solid rgba(24,24,27,.06)' }}>
+          {/* header row */}
+          <div style={{ display: 'grid',
+            gridTemplateColumns: '40px minmax(280px, 2fr) minmax(180px, 1.1fr) 70px 110px minmax(140px, 1fr) 110px',
+            gap: 16, padding: '10px 16px', background: '#ffffff',
+            fontSize: 9.5, fontFamily: 'var(--mono)', letterSpacing: 1.2,
+            color: 'rgba(24,24,27,.45)', fontWeight: 600 }}>
+            <span>STATUS</span>
+            <span>ISSUE</span>
+            <span>BILLIE · LOCATION</span>
+            <span>SEV</span>
+            <span>STARTED</span>
+            <span>ASSIGNED</span>
+            <span style={{ textAlign: 'right' }}></span>
+          </div>
+          {filtered.length === 0 && (
+            <div style={{ padding: '40px 16px', textAlign: 'center', background: '#fff',
+              fontSize: 12.5, color: 'rgba(24,24,27,.5)' }}>
+              Nothing here. Quiet shift.
+            </div>
+          )}
+          {filtered.map((a, i) => {
+            const isResolved = a.status === 'resolved';
+            return (
+              <div key={a.id}
+                onClick={() => goto && goto('operator')}
+                style={{ display: 'grid',
+                  gridTemplateColumns: '40px minmax(280px, 2fr) minmax(180px, 1.1fr) 70px 110px minmax(140px, 1fr) 110px',
+                  gap: 16, padding: '14px 16px', background: '#ffffff',
+                  cursor: 'pointer', transition: 'background .12s',
+                  alignItems: 'center', opacity: isResolved ? .55 : 1 }}
+                onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(24,24,27,.025)'}
+                onMouseLeave={(e) => e.currentTarget.style.background = '#ffffff'}>
+                {/* status */}
+                <div style={{ display: 'flex', alignItems: 'center' }}>
+                  {isResolved ? (
+                    <span style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                      width: 22, height: 22, borderRadius: 4,
+                      background: 'rgba(34,197,94,.12)', color: '#15803d' }}>
+                      <svg width="12" height="12" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M2 7l3 3 7-7"/></svg>
+                    </span>
+                  ) : a.ack ? (
+                    <span style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                      width: 22, height: 22, borderRadius: 4,
+                      background: 'rgba(91,91,247,.1)', color: '#4141e0' }}>
+                      <svg width="12" height="12" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"><circle cx="7" cy="7" r="5"/><path d="M7 4v3.5l2 1.5"/></svg>
+                    </span>
+                  ) : (
+                    <span style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                      width: 22, height: 22, borderRadius: 4,
+                      background: 'rgba(239,68,68,.12)', color: '#b91c1c' }}>
+                      <span style={{ width: 7, height: 7, borderRadius: 4, background: '#ef4444',
+                        boxShadow: '0 0 6px #ef4444',
+                        animation: 'billPulse 1.4s ease-in-out infinite' }}/>
+                    </span>
+                  )}
+                </div>
+                {/* issue */}
+                <div style={{ minWidth: 0 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <span style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                      width: 18, height: 18, borderRadius: 4, color: 'rgba(24,24,27,.55)',
+                      background: 'rgba(24,24,27,.05)', flexShrink: 0 }}>
+                      {KIND_ICON[a.kind]}
+                    </span>
+                    <span style={{ fontSize: 13, fontWeight: 600, color: '#17171a',
+                      letterSpacing: -.1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                      {a.issue}
+                    </span>
+                  </div>
+                  <div style={{ fontSize: 11.5, color: 'rgba(24,24,27,.55)',
+                    marginTop: 3, marginLeft: 26, lineHeight: 1.4,
+                    whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                    {a.why}
+                  </div>
+                </div>
+                {/* billie + location */}
+                <div style={{ minWidth: 0 }}>
+                  <div className="mono" style={{ fontSize: 12, fontWeight: 600,
+                    color: '#17171a', letterSpacing: .3, display: 'flex', alignItems: 'center', gap: 6 }}>
+                    <span style={{ fontSize: 12 }}>{a.flag}</span>
+                    <span>{a.robot}</span>
+                  </div>
+                  <div style={{ fontSize: 11, color: 'rgba(24,24,27,.5)', marginTop: 2 }}>
+                    {a.hotel} · rm {a.room}
+                  </div>
+                </div>
+                {/* severity */}
+                <div>
+                  <span style={{ display: 'inline-block', padding: '2px 7px', borderRadius: 3,
+                    fontSize: 9.5, fontFamily: 'var(--mono)', fontWeight: 700, letterSpacing: .6,
+                    background: SEV[a.severity].bg, color: SEV[a.severity].fg }}>
+                    {SEV[a.severity].label}
+                  </span>
+                </div>
+                {/* started + stalled */}
+                <div>
+                  <div className="mono" style={{ fontSize: 11.5, color: 'rgba(24,24,27,.7)',
+                    fontWeight: 600, letterSpacing: .3 }}>{a.started}</div>
+                  <div className="mono" style={{ fontSize: 10.5, color: 'rgba(24,24,27,.45)',
+                    letterSpacing: .3, marginTop: 2 }}>
+                    {a.stalled !== '—' ? `stalled ${a.stalled}` : '—'}
+                  </div>
+                </div>
+                {/* assigned */}
+                <div>
+                  {a.assignee ? (
+                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 7 }}>
+                      <span style={{ width: 22, height: 22, borderRadius: 11, background: a.assignee.color,
+                        color: '#fff', fontSize: 9.5, fontWeight: 700, letterSpacing: .3,
+                        display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                        flexShrink: 0 }}>{a.assignee.init}</span>
+                      <span style={{ fontSize: 12, color: '#17171a' }}>{a.assignee.name}</span>
+                    </span>
+                  ) : (
+                    <button onClick={(e) => e.stopPropagation()}
+                      style={{ all: 'unset', cursor: 'pointer',
+                        display: 'inline-flex', alignItems: 'center', gap: 6,
+                        padding: '4px 9px', borderRadius: 5,
+                        border: '1px dashed rgba(24,24,27,.2)',
+                        fontSize: 11, fontWeight: 600, color: 'rgba(24,24,27,.55)' }}>
+                      + Assign
+                    </button>
+                  )}
+                </div>
+                {/* action */}
+                <div style={{ textAlign: 'right' }}>
+                  {!isResolved ? (
+                    <a onClick={(e) => { e.stopPropagation(); goto && goto('operator'); }}
+                      style={{ display: 'inline-flex', alignItems: 'center', gap: 5,
+                        fontSize: 11.5, color: '#5b5bf7', fontWeight: 600, cursor: 'pointer',
+                        whiteSpace: 'nowrap' }}>
+                      Open console →
+                    </a>
+                  ) : (
+                    <span className="mono" style={{ fontSize: 10, color: 'rgba(24,24,27,.4)',
+                      letterSpacing: .8 }}>RESOLVED</span>
+                  )}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function AlertStat({ n, label, tone }) {
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', minWidth: 70 }}>
+      <span className="tnum" style={{ fontSize: 32, fontWeight: 700,
+        color: '#17171a', letterSpacing: -.5, lineHeight: 1, fontFamily: '"Helvetica Neue", Helvetica, Arial, sans-serif' }}>{n}</span>
+      <span className="mono" style={{ fontSize: 9.5, color: tone || 'rgba(24,24,27,.5)',
+        letterSpacing: 1.2, fontWeight: 700, marginTop: 6 }}>{label}</span>
+    </div>
+  );
+}
+
 function AlertsTable({ goto }) {
   const ROWS = [
     { flag: '🇮🇹', hotel: 'Marriott Rome',     robot: 'Billie-14', issue: 'Sensor recalibration required',  severity: 'high',  started: '14:02', assignee: 'Oded Polak',      avatar: 'OP', tone: '#fb923c' },
@@ -4698,6 +5838,269 @@ function TaskTrackingTable({ goto }) {
   );
 }
 
+function HomeAlertCards({ goto }) {
+  const RAW = [
+    {
+      id: 'a-08',
+      img: 'assets/flag-door.png',
+      flag: '🇮🇹', hotel: 'Marriott Rome',
+      robot: 'BILLIE-08', room: 'rm 1216 · entry',
+      issue: "Door won't open",
+      detail: '3 attempts · door handle out of reach',
+      severity: 'high',
+      stalledSec: 252,           // 4m 12s
+      assignee: null,            // unassigned
+      live: true,
+      nearby: 'BILLIE-12 · 30s',
+    },
+    {
+      id: 'a-12',
+      img: 'assets/flag-towels.png',
+      flag: '🇮🇹', hotel: 'Marriott Rome',
+      robot: 'BILLIE-12', room: 'rm 1210 · bathroom',
+      issue: "Stuck — can't reach the towel rack",
+      detail: 'Awaiting tele-op · arm at full extension',
+      severity: 'high',
+      stalledSec: 134,           // 2m 14s
+      assignee: { name: 'Oded Polak', avatar: 'OP', tone: '#fb923c' },
+      live: true,
+    },
+    {
+      id: 'a-21',
+      img: 'assets/flag-wardrobe.png',
+      flag: '🇩🇪', hotel: 'Hilton Berlin',
+      robot: 'BILLIE-21', room: 'rm 0804 · wardrobe',
+      issue: 'Battery degradation · 41% cap',
+      detail: 'Recommend swap before next room',
+      severity: 'med',
+      stalledSec: 0,
+      assignee: { name: 'M. Kim', avatar: 'MK', tone: '#a855f7' },
+      live: false,
+    },
+    {
+      id: 'a-09',
+      img: 'assets/flag-white-curtain.png',
+      flag: '🇧🇪', hotel: 'Cardo Brussels',
+      robot: 'BILLIE-09', room: 'rm 0512 · window wall',
+      issue: 'Arm pose drift on handover',
+      detail: 'Re-cal scheduled 16:00',
+      severity: 'med',
+      stalledSec: 0,
+      assignee: null,            // unassigned
+      live: false,
+    },
+  ];
+
+  // ---- urgency sort: HIGH first, within HIGH unassigned > assigned, then by stall time desc
+  const SEV_RANK = { high: 0, med: 1, low: 2 };
+  const ROWS = [...RAW].sort((a, b) => {
+    if (SEV_RANK[a.severity] !== SEV_RANK[b.severity]) return SEV_RANK[a.severity] - SEV_RANK[b.severity];
+    const ua = a.assignee ? 1 : 0, ub = b.assignee ? 1 : 0;
+    if (ua !== ub) return ua - ub;            // unassigned first
+    return b.stalledSec - a.stalledSec;        // longest stall first
+  });
+
+  // ---- live ticker for stall pill
+  const [tick, setTick] = React.useState(0);
+  React.useEffect(() => {
+    const id = setInterval(() => setTick(t => t + 1), 1000);
+    return () => clearInterval(id);
+  }, []);
+  const fmt = (sec) => {
+    const m = Math.floor(sec / 60);
+    const s = sec % 60;
+    return `${m}:${String(s).padStart(2,'0')}`;
+  };
+
+  const SEV = {
+    high: { bg: '#ef4444', fg: '#fff',     border: 'rgba(239,68,68,.45)',  ring: '0 0 0 3px rgba(239,68,68,.12)', label: 'HIGH' },
+    med:  { bg: '#f59e0b', fg: '#1f1300',  border: 'rgba(245,158,11,.35)', ring: 'none', label: 'MED'  },
+    low:  { bg: '#64748b', fg: '#fff',     border: 'rgba(0,0,0,.08)',      ring: 'none', label: 'LOW'  },
+  };
+
+  return (
+    <div style={{ display: 'grid',
+      gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: 12 }}>
+      {ROWS.map((a) => {
+        const sev = SEV[a.severity];
+        const unassigned = !a.assignee;
+        const stalled = a.stalledSec > 0;
+        const liveStall = stalled ? a.stalledSec + tick : 0;
+
+        return (
+          <div key={a.id} style={{ background: '#fff',
+            border: `1px solid ${unassigned ? '#fbbf24' : sev.border}`,
+            boxShadow: sev.ring,
+            borderRadius: 10, overflow: 'hidden',
+            display: 'flex', flexDirection: 'column',
+            position: 'relative',
+            cursor: 'pointer', transition: 'transform .12s, box-shadow .12s' }}
+            onMouseEnter={(e) => { e.currentTarget.style.transform = 'translateY(-1px)'; }}
+            onMouseLeave={(e) => { e.currentTarget.style.transform = 'translateY(0)'; }}>
+
+            {/* left accent bar for HIGH */}
+            {a.severity === 'high' && (
+              <div style={{ position: 'absolute', top: 0, bottom: 0, left: 0, width: 3,
+                background: '#ef4444', zIndex: 2 }}/>
+            )}
+
+            {/* unassigned amber ribbon */}
+            {unassigned && (
+              <div style={{ position: 'absolute', top: 8, right: 8, zIndex: 3,
+                display: 'inline-flex', alignItems: 'center', gap: 4,
+                padding: '3px 7px', borderRadius: 4,
+                background: '#fbbf24', color: '#5f3b00',
+                fontSize: 9, fontWeight: 700, letterSpacing: .6,
+                fontFamily: 'var(--mono)',
+                boxShadow: '0 2px 6px rgba(0,0,0,.2)' }}>
+                UNASSIGNED
+              </div>
+            )}
+
+            {/* photo */}
+            <div style={{ aspectRatio: '16/10', background: '#e5e7eb',
+              backgroundImage: `url(${a.img})`, backgroundSize: 'cover', backgroundPosition: 'center',
+              position: 'relative' }}>
+              {/* sev pill top-left */}
+              <div style={{ position: 'absolute', top: 8, left: 8,
+                display: 'inline-flex', alignItems: 'center', gap: 5,
+                padding: '3px 8px', borderRadius: 4,
+                background: sev.bg, color: sev.fg,
+                fontSize: 9.5, fontWeight: 700, letterSpacing: .6,
+                fontFamily: 'var(--mono)',
+                boxShadow: '0 2px 6px rgba(0,0,0,.2)' }}>
+                {a.severity === 'high' && (
+                  <span style={{ width: 5, height: 5, borderRadius: 3, background: '#fff',
+                    boxShadow: '0 0 4px #fff', animation: 'billPulse 1.4s ease-in-out infinite' }}/>
+                )}
+                {sev.label}
+              </div>
+
+              {/* live + ticking stall time bottom-right of photo */}
+              {(a.live || stalled) && (
+                <div style={{ position: 'absolute', bottom: 28, right: 8,
+                  display: 'inline-flex', alignItems: 'center', gap: 5,
+                  padding: '3px 7px', borderRadius: 4,
+                  background: 'rgba(0,0,0,.7)', backdropFilter: 'blur(4px)',
+                  color: '#fff', fontSize: 10, fontWeight: 700, letterSpacing: .4,
+                  fontFamily: 'var(--mono)' }}>
+                  {a.live && (
+                    <span style={{ width: 5, height: 5, borderRadius: 3, background: '#ef4444',
+                      boxShadow: '0 0 4px #ef4444',
+                      animation: 'billPulse 1.4s ease-in-out infinite' }}/>
+                  )}
+                  {stalled ? `STALLED ${fmt(liveStall)}` : 'LIVE'}
+                </div>
+              )}
+
+              {/* robot+room overlay bottom */}
+              <div style={{ position: 'absolute', left: 0, right: 0, bottom: 0,
+                padding: '14px 10px 8px',
+                background: 'linear-gradient(transparent, rgba(0,0,0,.6))',
+                display: 'flex', alignItems: 'center', gap: 6 }}>
+                <span style={{ fontSize: 12, lineHeight: 1 }}>{a.flag}</span>
+                <span className="mono" style={{ fontSize: 10, fontWeight: 700, color: '#fff',
+                  letterSpacing: .4 }}>{a.robot}</span>
+                <span style={{ color: 'rgba(255,255,255,.5)', fontSize: 10 }}>·</span>
+                <span className="mono" style={{ fontSize: 10, color: 'rgba(255,255,255,.85)',
+                  letterSpacing: .3 }}>{a.room}</span>
+              </div>
+            </div>
+
+            {/* alert body */}
+            <div style={{ padding: '10px 12px 12px', display: 'flex', flexDirection: 'column', gap: 8,
+              flex: 1 }}>
+              <div style={{ fontSize: 13, fontWeight: 600, color: '#111', lineHeight: 1.3,
+                letterSpacing: -.1 }}>
+                {a.issue}
+              </div>
+              <div style={{ fontSize: 11, color: 'rgba(0,0,0,.6)', lineHeight: 1.4 }}>
+                {a.detail}
+              </div>
+
+              {a.nearby && (
+                <div style={{ display: 'inline-flex', alignItems: 'center', gap: 5,
+                  padding: '4px 8px', borderRadius: 5,
+                  background: 'rgba(91,91,247,.08)',
+                  color: '#5b5bf7',
+                  fontSize: 10.5, fontWeight: 600,
+                  alignSelf: 'flex-start' }}>
+                  <span>↻</span>
+                  Reroute · {a.nearby}
+                </div>
+              )}
+
+              {/* meta row */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 'auto' }}>
+                {unassigned ? (
+                  <button style={{ all: 'unset', cursor: 'pointer',
+                    display: 'inline-flex', alignItems: 'center', gap: 5,
+                    padding: '3px 8px', borderRadius: 5, fontSize: 10.5, fontWeight: 700,
+                    color: '#5f3b00',
+                    background: 'rgba(251,191,36,.18)',
+                    border: '1px dashed rgba(245,158,11,.6)',
+                    letterSpacing: .2 }}>
+                    Take it →
+                  </button>
+                ) : (
+                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5 }}>
+                    <span style={{ width: 22, height: 22, borderRadius: 11,
+                      background: a.assignee.tone, color: '#fff',
+                      fontSize: 9, fontWeight: 700, letterSpacing: .3,
+                      display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                      flexShrink: 0 }}>{a.assignee.avatar}</span>
+                    <span style={{ fontSize: 11, color: '#111', whiteSpace: 'nowrap' }}>
+                      {a.assignee.name}
+                    </span>
+                  </span>
+                )}
+                <span style={{ flex: 1 }}/>
+              </div>
+
+              {/* CTAs — severity-aware */}
+              <div style={{ display: 'flex', gap: 6, marginTop: 2 }}>
+                {a.severity === 'high' ? (
+                  <>
+                    <button onClick={() => goto && goto('operator')}
+                      style={{ all: 'unset', cursor: 'pointer', flex: 1, textAlign: 'center',
+                        padding: '7px 8px', borderRadius: 5, fontSize: 11.5, fontWeight: 700,
+                        color: '#fff', background: '#111', letterSpacing: .2 }}>
+                      Open console →
+                    </button>
+                    <button style={{ all: 'unset', cursor: 'pointer',
+                      padding: '7px 10px', borderRadius: 5, fontSize: 11, fontWeight: 600,
+                      color: 'rgba(0,0,0,.6)',
+                      border: '1px solid rgba(0,0,0,.12)' }}>
+                      Escalate
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    <button style={{ all: 'unset', cursor: 'pointer', flex: 1, textAlign: 'center',
+                      padding: '7px 8px', borderRadius: 5, fontSize: 11.5, fontWeight: 700,
+                      color: '#111',
+                      background: '#fff',
+                      border: '1px solid rgba(0,0,0,.18)', letterSpacing: .2 }}>
+                      Acknowledge
+                    </button>
+                    <button onClick={() => goto && goto('operator')}
+                      style={{ all: 'unset', cursor: 'pointer',
+                        padding: '7px 10px', borderRadius: 5, fontSize: 11, fontWeight: 600,
+                        color: '#5b5bf7',
+                        border: '1px solid rgba(91,91,247,.3)' }}>
+                      Console
+                    </button>
+                  </>
+                )}
+              </div>
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
 function LiveInspectionStrip({ goto }) {
   const FLAGS = [
     { label: 'remote control', img: 'assets/flag-remote-control.png', robot: 'BILLIE-08', location: 'rm 1216 · living area' },
@@ -4857,6 +6260,183 @@ function KpiCard({ label, value, suffix, delta, deltaTone, ring, mono, custom, t
       <div style={{ marginTop: 10, fontSize: 10.5, color: deltaColor,
         display: 'inline-flex', alignItems: 'center', gap: 5, fontWeight: 600 }}>
         <span style={{ fontSize: 9 }}>{arrow}</span> {delta}
+      </div>
+    </div>
+  );
+}
+
+function TodayStrip({ sites, status, goto }) {
+  const totalDone = sites.reduce((a, s) => a + s.done, 0);
+  const totalAll  = sites.reduce((a, s) => a + s.total, 0);
+  const billies = DISPATCHER_BILLIES;
+  const working = billies.filter(b => b.state === 'working').length;
+  const idle    = billies.filter(b => b.state === 'idle').length;
+  const offline = billies.filter(b => b.state === 'offline').length;
+
+  const OPS = [
+    { initials: 'OP', name: 'Oded Polak',  shift: '4h 12m', color: '#fb923c' },
+    { initials: 'MR', name: 'Maya Reyes',  shift: '2h 48m', color: '#5b5bf7' },
+  ];
+
+  const statusColor = status.tone === 'warn' ? '#f59e0b' : '#22c55e';
+  const statusBg    = status.tone === 'warn' ? 'rgba(245,158,11,.12)' : 'rgba(34,197,94,.12)';
+  const statusText  = status.tone === 'warn' ? '#92400e' : '#15803d';
+
+  return (
+    <div style={{ display: 'grid', gridTemplateColumns: '1.1fr 1fr 1fr', gap: 14,
+      alignItems: 'stretch' }}>
+
+      {/* CELL 1 — rooms today (total + per site) */}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 10,
+        padding: '4px 16px 4px 0', borderRight: '1px solid rgba(0,0,0,.06)' }}>
+        <div style={{ display: 'flex', alignItems: 'baseline', gap: 8 }}>
+          <span className="mono" style={{ fontSize: 9.5, letterSpacing: 1.3, fontWeight: 600,
+            color: 'rgba(0,0,0,.5)' }}>ROOMS TODAY</span>
+          <span style={{ flex: 1 }}/>
+          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5,
+            padding: '2px 8px', borderRadius: 10, background: statusBg,
+            fontSize: 9.5, fontWeight: 700, color: statusText, letterSpacing: .3 }}>
+            <span style={{ width: 5, height: 5, borderRadius: 3, background: statusColor }}/>
+            {status.label}
+          </span>
+        </div>
+        <div style={{ display: 'flex', alignItems: 'baseline', gap: 6 }}>
+          <span className="mono tnum" style={{ fontSize: 32, fontWeight: 700, color: '#111',
+            letterSpacing: -.8, lineHeight: 1,
+            fontFamily: '"Helvetica Neue", Helvetica, Arial, sans-serif' }}>{totalDone}</span>
+          <span className="mono tnum" style={{ fontSize: 16, color: 'rgba(0,0,0,.4)',
+            fontWeight: 500 }}>/ {totalAll}</span>
+          <span style={{ flex: 1 }}/>
+          <span style={{ fontSize: 11, color: 'rgba(0,0,0,.55)' }}>across {sites.length} sites</span>
+        </div>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginTop: 2 }}>
+          {sites.map(s => {
+            const pct = s.done / s.total;
+            return (
+              <div key={s.name} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <span style={{ fontSize: 12, lineHeight: 1 }}>{s.flag}</span>
+                <span style={{ fontSize: 11.5, color: '#111', fontWeight: 500,
+                  flexShrink: 0, minWidth: 110, whiteSpace: 'nowrap',
+                  overflow: 'hidden', textOverflow: 'ellipsis' }}>{s.name}</span>
+                <div style={{ flex: 1, height: 4, background: 'rgba(0,0,0,.06)', borderRadius: 2,
+                  overflow: 'hidden' }}>
+                  <div style={{ width: `${pct * 100}%`, height: '100%', background: s.tone,
+                    borderRadius: 2 }}/>
+                </div>
+                <span className="mono tnum" style={{ fontSize: 10.5, color: 'rgba(0,0,0,.65)',
+                  fontWeight: 600, minWidth: 32, textAlign: 'right' }}>
+                  {s.done}/{s.total}
+                </span>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* CELL 2 — active Billies */}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 10,
+        padding: '4px 16px', borderRight: '1px solid rgba(0,0,0,.06)' }}>
+        <div style={{ display: 'flex', alignItems: 'baseline', gap: 8 }}>
+          <span className="mono" style={{ fontSize: 9.5, letterSpacing: 1.3, fontWeight: 600,
+            color: 'rgba(0,0,0,.5)' }}>ACTIVE BILLIES</span>
+          <span style={{ flex: 1 }}/>
+          <a onClick={() => goto('fleet')}
+            style={{ fontSize: 10.5, color: '#5b5bf7', cursor: 'pointer', fontWeight: 500 }}>
+            Fleet →
+          </a>
+        </div>
+        <div style={{ display: 'flex', alignItems: 'baseline', gap: 6 }}>
+          <span className="mono tnum" style={{ fontSize: 32, fontWeight: 700, color: '#111',
+            letterSpacing: -.8, lineHeight: 1,
+            fontFamily: '"Helvetica Neue", Helvetica, Arial, sans-serif' }}>
+            {working + idle}
+          </span>
+          <span className="mono tnum" style={{ fontSize: 16, color: 'rgba(0,0,0,.4)',
+            fontWeight: 500 }}>/ {billies.length}</span>
+          <span style={{ flex: 1 }}/>
+          <span style={{ fontSize: 11, color: 'rgba(0,0,0,.55)' }}>online now</span>
+        </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginTop: 2 }}>
+          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, fontSize: 11 }}>
+            <span style={{ width: 6, height: 6, borderRadius: 3, background: '#22c55e' }}/>
+            <span className="mono tnum" style={{ fontWeight: 600, color: '#111' }}>{working}</span>
+            <span style={{ color: 'rgba(0,0,0,.55)' }}>working</span>
+          </span>
+          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, fontSize: 11 }}>
+            <span style={{ width: 6, height: 6, borderRadius: 3, background: '#a3a3a3' }}/>
+            <span className="mono tnum" style={{ fontWeight: 600, color: '#111' }}>{idle}</span>
+            <span style={{ color: 'rgba(0,0,0,.55)' }}>idle</span>
+          </span>
+          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, fontSize: 11 }}>
+            <span style={{ width: 6, height: 6, borderRadius: 3, background: 'rgba(0,0,0,.25)' }}/>
+            <span className="mono tnum" style={{ fontWeight: 600, color: '#111' }}>{offline}</span>
+            <span style={{ color: 'rgba(0,0,0,.55)' }}>offline</span>
+          </span>
+        </div>
+        {/* compact billie chips */}
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, marginTop: 4 }}>
+          {billies.slice(0, 8).map(b => {
+            const tone = b.state === 'working' ? '#22c55e'
+              : b.state === 'idle' ? '#a3a3a3'
+              : b.state === 'charging' ? '#f59e0b' : 'rgba(0,0,0,.25)';
+            return (
+              <span key={b.id} className="mono" style={{ display: 'inline-flex', alignItems: 'center', gap: 4,
+                padding: '2px 6px', borderRadius: 4, fontSize: 9.5, fontWeight: 600,
+                color: 'rgba(0,0,0,.7)',
+                background: 'rgba(0,0,0,.04)' }}>
+                <span style={{ width: 5, height: 5, borderRadius: 3, background: tone }}/>
+                {b.id.replace('BILLIE-', 'B')}
+              </span>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* CELL 3 — operators on shift */}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 10, padding: '4px 0 4px 16px' }}>
+        <div style={{ display: 'flex', alignItems: 'baseline', gap: 8 }}>
+          <span className="mono" style={{ fontSize: 9.5, letterSpacing: 1.3, fontWeight: 600,
+            color: 'rgba(0,0,0,.5)' }}>OPERATORS ON SHIFT</span>
+          <span style={{ flex: 1 }}/>
+          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5,
+            padding: '2px 8px', borderRadius: 10, background: 'rgba(34,197,94,.12)',
+            fontSize: 9.5, fontWeight: 700, color: '#15803d', letterSpacing: .3 }}>
+            <span style={{ width: 5, height: 5, borderRadius: 3, background: '#22c55e',
+              boxShadow: '0 0 5px #22c55e' }}/>
+            LIVE
+          </span>
+        </div>
+        <div style={{ display: 'flex', alignItems: 'baseline', gap: 6 }}>
+          <span className="mono tnum" style={{ fontSize: 32, fontWeight: 700, color: '#111',
+            letterSpacing: -.8, lineHeight: 1,
+            fontFamily: '"Helvetica Neue", Helvetica, Arial, sans-serif' }}>{OPS.length}</span>
+          <span style={{ flex: 1 }}/>
+          <span style={{ fontSize: 11, color: 'rgba(0,0,0,.55)' }}>tele-op coverage</span>
+        </div>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginTop: 2 }}>
+          {OPS.map(op => (
+            <div key={op.name} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <div style={{ width: 26, height: 26, borderRadius: 13,
+                background: `linear-gradient(135deg, ${op.color}aa, ${op.color})`,
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                color: '#fff', fontWeight: 700, fontSize: 10, letterSpacing: .3, flexShrink: 0,
+                boxShadow: '0 0 0 2px #fff' }}>{op.initials}</div>
+              <div style={{ display: 'flex', flexDirection: 'column', lineHeight: 1.2,
+                minWidth: 0, flex: 1 }}>
+                <span style={{ fontSize: 12, fontWeight: 600, color: '#111',
+                  whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                  {op.name}
+                </span>
+                <span className="mono" style={{ fontSize: 9.5, color: 'rgba(0,0,0,.5)',
+                  letterSpacing: .3 }}>
+                  on shift · {op.shift}
+                </span>
+              </div>
+              <span style={{ width: 6, height: 6, borderRadius: 3, background: '#22c55e',
+                boxShadow: '0 0 5px #22c55e' }}/>
+            </div>
+          ))}
+        </div>
       </div>
     </div>
   );
@@ -6369,6 +7949,16 @@ function LayoutCinema({ lidar, setLidar, armPos = 'stacked' }) {
   const [locked, setLocked] = React.useState(true);
   const [manual, setManual] = React.useState(false);
   const [aborted, setAborted] = React.useState(false);
+  const abortAnnouncedRef = React.useRef(false);
+  React.useEffect(() => {
+    if (aborted && !abortAnnouncedRef.current) {
+      abortAnnouncedRef.current = true;
+      s.setMessages((m) => [...m,
+        { role: 'agent', content: `Flow aborted. I'm handing ${ROBOT.id} over to you — please take the wheel and drive manually. Joints unlocked, motion stopped, I'm watching.` },
+      ]);
+    }
+    if (!aborted) abortAnnouncedRef.current = false;
+  }, [aborted]);
   const [paused, setPaused] = React.useState(true); // demo: stopped so predictions show
   const [flowName, setFlowName] = React.useState('Morning Café Run');
   const [flowOpen, setFlowOpen] = React.useState(false);
@@ -6432,6 +8022,16 @@ function LayoutCinema({ lidar, setLidar, armPos = 'stacked' }) {
 
       {/* fleet top-nav strip */}
       <FleetTopNav fleet={FLEET} selectedId={selectedBillyId} onSelect={setSelectedBillyId} currentRoom={currentRoom} rightEdge={chatOpen ? SIDEBAR_W : 0}/>
+
+      {/* Abort banner — operator-takeover handoff */}
+      {aborted && (
+        <AbortTakeoverBanner
+          robotId={selectedBilly?.id || ROBOT.id}
+          flowName={flowName}
+          onResume={() => { setAborted(false); setManual(false); setLocked(true); }}
+          rightEdge={chatOpen ? SIDEBAR_W : 0}
+        />
+      )}
 
       {/* top bar — stats, time on right (below the fleet nav) */}
       <div style={{ position: 'absolute', top: 56, left: 12, right: rightEdge, display: 'flex', gap: 10,
@@ -6572,7 +8172,7 @@ function LayoutCinema({ lidar, setLidar, armPos = 'stacked' }) {
           </span>
         </div>
         <div style={{ width: 1, height: 24, background: 'rgba(255,255,255,.1)' }}/>
-        <ActionBtn tone="danger" disabled={aborted} onClick={() => setAborted(true)}>
+        <ActionBtn tone="danger" disabled={aborted} onClick={() => { setAborted(true); setManual(true); setLocked(false); }}>
           <svg width="13" height="13" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"><circle cx="7" cy="7" r="5.2"/><path d="M7 4.4v3.2M7 9.5v.01"/></svg>
           {aborted ? 'Flow aborted' : 'Abort Flow'}
         </ActionBtn>
@@ -6840,7 +8440,11 @@ function DarkChatWithQuick({ messages, setMessages, robot, paused, flowCur, onRe
         </span>
       </div>
       {/* quick actions */}
-      <div style={{ padding: '8px 10px', borderTop: '1px solid rgba(255,255,255,.06)', display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+      <div style={{ padding: '6px 12px 0', fontSize: 10, fontFamily: 'var(--mono)', letterSpacing: .8,
+        color: 'rgba(255,255,255,.42)', borderTop: '1px solid rgba(255,255,255,.06)' }}>
+        you can write any command in your own words
+      </div>
+      <div style={{ padding: '6px 10px 8px', display: 'flex', gap: 6, flexWrap: 'wrap' }}>
         {QUICKS.map((q) => (
           <button key={q.label} onClick={() => sendText(q.label)} disabled={busy}
             style={{ border: '1px solid rgba(255,255,255,.12)', background: 'rgba(255,255,255,.04)',

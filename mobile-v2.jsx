@@ -78,7 +78,6 @@ function MobileV2({ layoutVariant = 'feed' }) {
             color: '#fff', cursor: 'pointer', position: 'relative',
             display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
             <MIcon d={MI.alert} size={18}/>
-            <MActivityBadge n={cards.length} dark/>
           </button>
         </div>
       </div>
@@ -189,10 +188,6 @@ function MobileV2({ layoutVariant = 'feed' }) {
             cursor: 'pointer', flexShrink: 0 }}>
           <div>
             <div style={{ fontSize: 14, fontWeight: 600, color: '#fff' }}>Queue</div>
-            <div style={{ fontSize: 11, color: 'rgba(255,255,255,.5)',
-              fontFamily: 'var(--mono)', marginTop: 1 }}>
-              {SEED_QUEUE.filter(q => q.status !== 'done').length} active · 1 running
-            </div>
           </div>
           <div style={{ marginLeft: 'auto', display: 'flex', gap: 8, alignItems: 'center' }}>
             <MEStop size={44} label={false}/>
@@ -201,7 +196,7 @@ function MobileV2({ layoutVariant = 'feed' }) {
         {/* queue rows */}
         <div style={{ padding: '4px 14px 14px', display: 'flex', flexDirection: 'column', gap: 6,
           overflow: 'auto', flex: 1 }}>
-          {SEED_QUEUE.map((q, i) => <MTaskRow key={i} {...q} dark compact/>)}
+          {SEED_QUEUE.filter(q => q.status !== 'queued' && q.status !== 'running').map((q, i) => <MTaskRow key={i} {...q} dark compact/>)}
         </div>
       </div>
 
